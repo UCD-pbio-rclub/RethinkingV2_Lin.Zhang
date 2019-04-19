@@ -21,6 +21,27 @@ samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
 ## 3E1
 
 ```r
+sum(samples <0.2)/length(samples)
+```
+
+```
+## [1] 5e-04
+```
+## 3E2
+
+
+## 3E3
+
+```r
+sum (samples > 0.2 & samples <0.8) / length(samples)
+```
+
+```
+## [1] 0.8878
+```
+## 3E4
+
+```r
 quantile(samples,0.2)
 ```
 
@@ -28,33 +49,16 @@ quantile(samples,0.2)
 ##       20% 
 ## 0.5195195
 ```
-## 3E3
-
-```r
-p <- 1-quantile(samples,0.8)
-p
-```
-
-```
-##       80% 
-## 0.2432432
-```
-## 3E3
-
-```r
-quantile (samples,c(0.2,0.8))
-```
-
-```
-##       20%       80% 
-## 0.5195195 0.7567568
-```
-## 3E4
-
-
 ## 3E5
 
+```r
+quantile(samples,0.2)
+```
 
+```
+##       20% 
+## 0.5195195
+```
 ## 3E6
 
 ```r
@@ -144,11 +148,21 @@ HPDI(samples, prob = 0.90)
 
 ```r
 w2 <- rbinom(1e4, size = 15,prob = samples2)
-simplehist(w2)
+sum(w2==8)/length(w2)
 ```
 
-![](Chapter3_HW_files/figure-html/3M3-1.png)<!-- -->
+```
+## [1] 0.1475
+```
 
 ## 3M4
 
+```r
+w3 <- rbinom(1e4, size = 9, prob = samples2)
+sum(w3==6)/length(w3)
+```
+
+```
+## [1] 0.1766
+```
 

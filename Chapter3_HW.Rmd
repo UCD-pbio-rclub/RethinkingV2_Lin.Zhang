@@ -18,28 +18,27 @@ samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
 ```
 
 ## 3E1
-```{r 3E1}
-quantile(samples,0.2)
+```{r}
+sum(samples <0.2)/length(samples)
+                      
 ```
-## 3E3
-```{r 3E2}
-p <- 1-quantile(samples,0.8)
-p
+## 3E2
+```{r}
+
 ```
+
 ## 3E3
 ```{r 3E3}
-quantile (samples,c(0.2,0.8))
+sum (samples > 0.2 & samples <0.8) / length(samples)
 ```
 ## 3E4
 ```{r 3E4}
-
+quantile(samples,0.2)
 ```
-
 ## 3E5
 ```{r 3E5}
-
+quantile(samples,0.2)
 ```
-
 ## 3E6
 ```{r 3E6}
 library(rethinking)
@@ -70,11 +69,13 @@ HPDI(samples, prob = 0.90)
 ## 3M3
 ```{r 3M3}
 w2 <- rbinom(1e4, size = 15,prob = samples2)
-simplehist(w2)
+sum(w2==8)/length(w2)
+
 ```
 
 ## 3M4
 ```{r 3M4}
-
+w3 <- rbinom(1e4, size = 9, prob = samples2)
+sum(w3==6)/length(w3)
 ```
 
