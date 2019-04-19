@@ -1,0 +1,80 @@
+---
+title: "Chapter3_HW"
+author: "Lin Zhang"
+date: "4/19/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r}
+p_grid <- seq(from=0, to=1, length.out=1000)
+prior <- rep (1,1000)
+likelihood <- dbinom (6, size = 9, prob=p_grid)
+posterior <- likelihood* prior
+posterior <- posterior/sum(posterior)
+set.seed(100)
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
+```
+
+## 3E1
+```{r 3E1}
+quantile(samples,0.2)
+```
+## 3E3
+```{r 3E2}
+p <- 1-quantile(samples,0.8)
+p
+```
+## 3E3
+```{r 3E3}
+quantile (samples,c(0.2,0.8))
+```
+## 3E4
+```{r 3E4}
+
+```
+
+## 3E5
+```{r 3E5}
+
+```
+
+## 3E6
+```{r 3E6}
+library(rethinking)
+HPDI(samples, prob = 0.66)
+```
+## 3E7
+```{r 3E7}
+library(rethinking)
+PI(samples, prob = 0.66)
+```
+## 3M1
+```{r 3M1}
+p_grid <- seq(from=0, to=1, length.out=1000)
+prior <- rep (1,1000)
+likelihood2 <- dbinom (8, size = 15, prob=p_grid)
+posterior2 <- likelihood2* prior
+posterior2 <- posterior2/sum(posterior2)
+
+```
+
+## 3M2
+```{r 3M2}
+set.seed(100)
+samples2 <- sample(p_grid, prob = posterior2, size = 1e4, replace = TRUE)
+library(rethinking)
+HPDI(samples, prob = 0.90)
+```
+## 3M3
+```{r 3M3}
+w2 <- rbinom(1e4, size = 15,prob = samples2)
+simplehist(w2)
+```
+
+## 3M4
+```{r 3M4}
+
+```
+
