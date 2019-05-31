@@ -1,0 +1,310 @@
+---
+title: "Chapter6_textbook"
+author: "Lin Zhang"
+date: "5/27/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+#6.1 Multicollinearity
+##6.1.1 Multicollinear legs
+```{r simulate the heights and leg lengths of 100 individuals}
+library(rethinking)
+N <- 100  # number of individuals
+set.seed(909) 
+height <- rnorm(N,10,2) # sim total height of each
+leg_prop <- runif(N,0.4,0.5) # leg as proportion of height
+leg_left <- leg_prop*height+rnorm(N,0,0.02) # sim left leg as proportion + error
+leg_right <- leg_prop*height+rnorm(N,0,0.02) # sim right leg as proportion +error
+d <- data.frame(height,leg_left,leg_right) # combine into data frame
+```
+
+```{r predict outcome height with both predictors leg_left and leg_right}
+m6.1 <- quap(
+  alist(
+    height ~ dnorm(mu,sigma),
+    mu <- a+bl*leg_left+br*leg_right,
+    a ~ dnorm(10,100),
+    bl ~ dnorm(2,10),
+    br ~ dnorm(2,10),
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m6.1)
+plot(precis(m6.1))
+```
+
+```{r bivariate posterior distribution for bl and br}
+post <- extract.samples(m6.1)
+plot(bl ~ br, post, col=col.alpha(rangi2,0.1),pch=16)
+```
+
+```{r}
+sum_blbr <- post$bl+post$br
+dens(sum_blbr,col=rangi2,lwd=2,xlab="sum of bl and br")
+mean(sum_blbr)
+```
+
+```{r fit a regression with only one of leg length variables}
+m6.2 <- quap(
+  alist(
+    height ~ dnorm(mu,sigma),
+    mu <- a+bl*leg_left,
+    a ~ dnorm(10,100),
+    bl ~ dnorm(2,10),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.2)
+```
+
+# Multiollinear milk
+```{r load and standardize data}
+library(rethinking)
+data("milk")
+d <- milk
+d$K <- scale(d$kcal.per.g)
+d$F <- scale(d$perc.fat)
+d$L <- scale(d$perc.lactose)
+```
+
+```{r build two bivariate regressions}
+# kcal.per.g regressed on perc.fat
+m6.3 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bF*F,
+    a ~ dnorm(0,0.2),
+    bF ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=d
+)
+xseq <- seq(from=min(d$F)-0.15, to=max(d$F)+0.15,length.out = 30)
+mu <- link(m6.3,data = list(F=xseq))
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+plot(K ~ F, data=d)
+lines(xseq,mu_mean,lwd=2)
+shade(mu_PI,xseq)
+
+# kcal.per.g regressed on perc.lactose
+m6.4 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bL*L,
+    a ~ dnorm(0,0.2),
+    bL ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+xseq <- seq(from=min(d$L)-0.15, to=max(d$L)+0.15,length.out = 30)
+mu <- link(m6.4,data = list(L=xseq))
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+plot(K ~ L, data=d)
+lines(xseq,mu_mean,lwd=2)
+shade(mu_PI,xseq)
+precis(m6.3)
+precis(m6.4)
+
+```
+
+```{r put both predictor variables in the same regression model}
+m6.5 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bF*F+bL*L,
+    a ~ dnorm(0,0.2),
+    bF ~ dnorm(0,0.5),
+    bL ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.5)
+```
+```{r}
+pairs(~ kcal.per.g+perc.fat+perc.lactose,data=d,col=rangi2)
+cor(d$perc.fat,d$perc.lactose)
+```
+# 6.2 Post-treatment bias
+```{r simulate data}
+set.seed(71)
+# number of plants
+N <- 100
+# simulate initial heights
+h0 <- rnorm(N,10,2)
+# assign treatments and simulate fungus and growth
+treatment <- rep(0:1,each=N/2)
+fungus <- rbinom(N,size = 1,prob = 0.5-treatment*0.4)
+h1 <- h0+ rnorm(N,5-3*fungus)
+# compose a clean data frame
+d <- data.frame(h0=h0,h1=h1,treatment=treatment,fungus=fungus)
+precis(d)
+```
+
+```{r build the model without knowing the data}
+sim_p <- rlnorm(1e4,0,0.25)
+precis(data.frame(sim_p))
+```
+
+```{r fit the model}
+m6.6 <- quap (
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p ~ dlnorm(0,0.25),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.6)
+```
+
+```{r approximate the posterior with both treatment and the post-treatment fungus}
+m6.7 <- quap(
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p <- a+bt*treatment+bf*fungus,
+    a ~ dlnorm(0,0.2),
+    bt ~ dnorm(0,0.5),
+    bf ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.7)
+```
+
+```{r omit the post-treatment variable fungus}
+m6.8 <- quap(
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p <- a+bt*treatment,
+    a ~ dlnorm(0,0.2),
+    bt ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ), data = d)
+precis(m6.8)
+
+
+```
+# 6.2.3 Fungus and d-separation
+```{r graph analysis of variables in the above experiment}
+library(dagitty)
+plant_dag <- dagitty("dag{
+                     H0 -> H1
+                     F -> H1
+                     T -> F}"
+)
+coordinates(plant_dag) <- list(x=c(H0=0,T=2,F=1.5,H1=1),
+                               y=c(H0=0,T=0,F=1,H1=2))
+plot(plant_dag)
+dseparated(plant_dag,"T","H1")
+dseparated(plant_dag,"T","H1","F")
+impliedConditionalIndependencies(plant_dag)
+```
+
+# 6.3 Collider bias
+## 6.3.1 Collider of false sorrow
+```{r simulate data for H-->M<--A }
+library(rethinking)
+d <- sim_happiness(seed=1977, N_years = 1000)
+precis(d)
+# filter and scale the data
+d2 <- d[d$age>17,] # only adults
+d2$A <- (d2$age-18)/(65-18)
+```
+
+```{r fit the model considering collider variable}
+d2$mid <- d2$married+1
+m6.9 <- quap(
+  alist(
+    happiness ~ dnorm(mu,sigma),
+    mu <- a[mid]+bA*A,
+    a[mid] ~ dnorm(0,1),
+    bA ~ dnorm(0,2),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m6.9,depth = 2)
+```
+
+```{r build a model that omits marriage status}
+m6.10 <- quap(
+  alist(
+    happiness ~ dnorm(mu,sigma),
+    mu <- a+bA*A,
+    a ~ dnorm(0,1),
+    bA ~ dnorm(0,2),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m6.10)
+```
+
+```{r create random observations}
+N <- 200 # number of gradparent-parent-child triads
+b_GP <- 1 # direct effect of G on P
+b_GC <- 0 # direct effect of G on C
+b_PC <- 1 # direct effect of P on C
+b_U <- 2 # direct effect U on P and C
+set.seed(1)
+U <- 2*rbern(N,0.5)-1
+G <- rnorm(N)
+P <- rnorm(N, b_GP*G+b_U*U)
+C <- rnorm(N, b_PC*P+b_GC*G+b_U*U)
+d <- data.frame(C=C,P=P,G=G,U=U)
+```
+
+
+```{r build a model condition only on parental eduction}
+m6.11 <- quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a+b_PC*P+b_GC*G,
+    a ~ dnorm(0,1),
+    c(b_PC,b_GC) ~ dnorm(0,1),  # condition on parental eduction turns out to be a collider
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.11)
+
+```
+
+```{r build a model condition also on U}
+m6.12 <- quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a+b_PC*P+b_GC*G+b_U*U,
+    a ~ dnorm(0,1),
+    c(b_PC,b_GC,b_U) ~ dnorm(0,1),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.12)
+```
+
+```{r find the backdoor suggestions}
+library(dagitty)
+dag_6.1 <- dagitty("dag{
+X -> Y <- C
+X <- U -> B
+U <- A -> C
+U -> B <- C
+                   }")
+adjustmentSets(dag_6.1, exposure = "X", outcome = "Y")
+```
+
+```{r minimal set of covariates by DAG}
+library(dagitty)
+dag_6.2 <- dagitty("dag {
+                   S -> A -> D
+                   S -> M -> D
+                   S -> W -> D
+                   A -> M
+                   }")
+adjustmentSets(dag_6.2,exposure = "W",outcome = "D")
+impliedConditionalIndependencies(dag_6.2)
+
+```
+

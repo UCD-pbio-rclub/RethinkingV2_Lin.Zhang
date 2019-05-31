@@ -1,0 +1,485 @@
+---
+title: "Chapter5_textbook"
+author: "Lin Zhang"
+date: "5/23/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+# 5.1 Spurious association
+```{r divorce and marriage rate modeling}
+# load data and copy
+library(rethinking)
+data("WaffleDivorce")
+d <- WaffleDivorce
+```
+
+```{r fit a model to divorce rate and median age of marriage, compute the approximate posterior}
+# standardize variables
+d$A <- scale(d$MedianAgeMarriage)
+d$D <- scale(d$Divorce)
+sd(d$MedianAgeMarriage)
+m5.1 <- quap(
+  alist(
+    D ~ dnorm(mu,sigma),
+    mu <- a+bA*A,
+    a ~ dnorm(0,0.2),
+    bA ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+```
+
+```{r simulate from priors} 
+# what does the below mean
+set.seed(10)
+prior <- extract.prior(m5.1)
+mu <- link(m5.1,post=prior,data = list(A=c(-2,2)))
+plot(NULL,xlim=c(-2,2),ylim=c(-2,2))
+for (i in 1:50) lines(c(-2,2),mu[i,],col=col.alpha("black",0.4))
+```
+
+```{r posterior distribution compute percentile interval of mean}
+A_seq <- seq(from=-3,to=3.2,length.out = 30)
+mu <- link(m5.1,data = list(A=A_seq))
+mu.mean <- apply(mu,2,mean)
+mu.PI <- apply(mu,2, PI)
+# plot it all
+plot(D ~ A, data=d, col=rangi2)
+lines(A_seq, mu.mean, lwd=2)
+shade(mu.PI,A_seq)
+precis(mu)
+```
+
+```{r fit a model between divorce and marriage rates}
+d$M <- scale(d$Marriage)
+m5.2 <- quap(
+  alist(
+    D ~ dnorm(mu,sigma),
+    mu <- a+bM*M,
+    a ~ dnorm(0,0.2),
+    bM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=d
+)
+# compute percentile interval of mean from posterior distribution
+M_seq <- seq(from=-3,to = 3.2, length.out = 30)
+mu_5.2 <- link(m5.2,data = list(M=M_seq))
+mu_5.2.mean <- apply(mu_5.2,2,mean)
+mu_5.2.PI <- apply(mu_5.2,2,PI)
+# plot it all
+plot(D~M, data=d, col=rangi2)
+lines(M_seq,mu_5.2.mean,lwd=2)
+shade(mu_5.2.PI,M_seq)
+```
+```{r drawing a DAG}
+install.packages('dagitty')
+library(dagitty)
+dag5.1 <- dagitty("dag{
+                  A->D
+                  A->M
+                  M->D
+                  }")
+coordinates(dag5.1) <- list(x=c(A=0,D=1,M=2),y=c(A=0,D=1,M=0))
+plot(dag5.1)
+
+```
+
+```{r Multiple regression notation for divorce rate based on marriage rate and age at marriage}
+library(rethinking)
+m5.3 <- quap(
+  alist(
+    D ~ dnorm(mu,sigma),
+    mu <- a+bM*M+bA*A,
+    a ~ dnorm(0,0.2),
+    bM ~ dnorm(0,0.5),
+    bA ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m5.3)
+plot(coeftab(m5.1,m5.2,m5.3))
+```
+
+```{r investigate relationship between age at marriage and marriage rate}
+#fit a model between divorce and marriage rates}
+d$M <- scale(d$Marriage)
+d$A <- scale(d$MedianAgeMarriage)
+m5.4 <- quap(
+  alist(
+    M ~ dnorm(mu,sigma),
+    mu <- a+bAM*A,
+    a ~ dnorm(0,0.2),
+    bAM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=d
+)
+# compute percentile interval of mean from posterior distribution
+A_seq <- seq(from=-3,to = 3.2, length.out = 30)
+mu_5.4 <- link(m5.4,data = list(A=A_seq))
+mu_5.4.mean <- apply(mu_5.4,2,mean)
+mu_5.4.PI <- apply(mu_5.4,2,PI)
+# plot it all
+plot(M~A, data=d, col=rangi2)
+lines(A_seq,mu_5.4.mean,lwd=2)
+shade(mu_5.4.PI,A_seq)
+# compute residuals by subtracting the observed marriage rate in each State from the predicted rate
+mu <- link(m5.4)
+mu_mean <- apply(mu,2,mean)
+mu_resid <- d$M-mu_mean
+# how to plot figure 5.4?
+#points(x=$A, y=mu_resid,type = "p",col="red")
+# fit a model between divorce and residuals of marriage rate ~ age at marriage
+d$D <- scale(d$Divorce)
+d$RMA <- scale(mu_resid)
+m5.5 <- quap(
+  alist(
+    D ~ dnorm(mu,sigma),
+    mu <- a+bRMA*RMA,
+    a ~ dnorm(0,0.2),
+    bRMA ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=d
+)
+RMA_seq <- seq(from=-2, to=2, length.out = 30)
+mu_5.5 <- link(m5.5,data=list(RMA=RMA_seq))
+mu_5.5.mean <- apply(mu_5.5,2,mean)
+mu_5.5.PI <- apply(mu_5.5,2,PI)
+plot(D~ RMA,data=d,col=rangi2)
+lines(RMA_seq,mu_5.5.mean,lwd=2)
+shade(mu_5.5.PI,RMA_seq)
+```
+
+```{r ??? predictor residual plot}
+
+```
+
+## 5.1.4.2 Counterfactual plot
+
+```{r Counterfactual plot}
+#impact of changes on M(marriage rate) on predictions
+mean(d$A)
+M_seq <- seq(from=-2,to=3,length.out = 30)
+pred_data <- data.frame(M=M_seq,A=0)
+pred_data
+# compute counterfactual mean divorce (mu)
+mu <- link(m5.3,data = pred_data)
+mu_mean <- apply(mu,2,mean)
+mu_PI <- apply(mu,2,PI)
+# simulate counterfactual divorce outcomes
+D_sim <- sim(m5.3,data = pred_data,n=1e4)
+D_PI <- apply(D_sim, 2, PI)
+# display predictionis, hiding raw data with type="n"
+plot(D ~ M,data=d,type="n")
+mtext("Median age marriage (std)=0")
+lines(M_seq,mu_mean)
+shade(mu_PI,M_seq)
+shade(D_PI,M_seq)
+
+#impact of changes on A(Median age at marriage) on predictions
+mean(d$M)
+A_seq <- seq(from=-3, to=4, length.out = 40)
+pred_data_2 <- data.frame(A=A_seq,M=0)
+mu_2 <- link(m5.3,data = pred_data_2)
+mu_mean_2 <- apply(mu_2,2,mean)
+mu_PI_2 <- apply(mu_2,2,PI)
+D_sim_2 <- sim(m5.3, data = pred_data_2,n=1e4)
+D_PI_2 <- apply(D_sim_2,2,PI)
+plot(D ~ A, data=d, type="n")
+mtext("Marriage rate (std)=0")
+lines(A_seq,mu_mean_2)
+shade(mu_PI_2,A_seq)
+shade(D_PI_2,A_seq)
+```
+
+## Posterior prediction plots
+```{r posterior predictive check by simulating predictions averaging over the posterior}
+# simulate predictions using the original observed data
+## call link without specifying new data so it uses original data
+mu <- link(m5.3)
+# summarize sampels across cases
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+# simulate observations again no new data so uses original data
+D_sim <- sim(m5.3,n = 1e4)
+D_PI <- apply(D_sim, 2, PI)
+plot(mu_mean ~ d$D, col=rangi2, ylim=range(mu_PI),xlab="Observed divorce", ylab="Predicted divorce")
+abline(a = 0,b = 1, lty=2)
+for (i in 1:nrow(d)) lines(rep(d$D[i],2),mu_PI[,i],col=rangi2)
+identify(x=d$D,y=mu_mean,labels=d$Loc)
+```
+
+# 5.2 Masked relationship
+```{r}
+library(rethinking)
+data(milk)
+d <- milk
+# stadardize variables
+d$K <- scale(d$kcal.per.g)
+d$N <- scale(d$neocortex.perc)
+d$M <- scale(log(d$mass))
+```
+
+```{r}
+#install.packages('dagitty')
+library(dagitty)
+dag5.2 <- dagitty("dag{
+                  N->K
+                  N->M
+                  M->K
+                  }")
+coordinates(dag5.2) <- list(x=c(N=0,K=1,M=2),y=c(N=0,K=1,M=0))
+plot(dag5.2)
+
+```
+```{r investigate teh correlation between variables}
+pairs(~K+M+N,dcc)
+```
+```{r add both predictor variables N and M to the regression}
+m5.7 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bN*N+bM*M,
+    a ~ dnorm(0,0.2),
+    bN ~ dnorm(0,0.5),
+    bM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=dcc
+)
+precis(m5.7)
+plot(coeftab(m5.5,m5.6,m5.7),pars=c("bM","bN"))
+
+```
+
+```{r fit a model}
+dcc <- d[complete.cases(d$K,d$N,d$M),]
+m5.5 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bN*N,
+    a ~ dnorm(0,0.2),
+    bN ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = dcc
+)
+```
+
+```{r simulate and plot 50 prior regression lines}
+prior <- extract.prior(m5.5)
+xseq <- c(-2,2)
+mu <- link(m5.5_draft,post=prior,data=list(N=xseq))
+plot(NULL,xlim=xseq,ylim=xseq)
+for (i in 1:50) lines(xseq, mu[i,],col=col.alpha("black",0.3))
+```
+
+```{r plot and examine the posterior distribution}
+xseq <- seq(from=min(dcc$N)-0.15, to=max(dcc$N)+0.15, length.out = 30)
+mu <- link(m5.5,data = list(N=xseq))
+mu_mean <- apply(mu,2,mean)
+mu_PI <- apply(mu, 2, PI)
+plot(K ~ N, data=dcc)
+lines(xseq, mu_mean, lwd=2)
+shade(mu_PI, xseq)
+```
+
+```{r fit a model to kilocalories and body mass and plot the prior}
+m5.6 <- quap(
+  alist(
+  K ~ dnorm(mu,sigma),
+  mu <- a+bM*M,
+  a ~ dnorm(0,0.2), 
+  bM ~ dnorm(0,0.5),
+  sigma ~ dexp(1)
+  ),data = dcc)
+precis(m5.6)
+xseq_2 <- seq(from=min(dcc$M)-0.15,to=max(dcc$M)+0.15,length.out = 30)
+mu_2 <- link(m5.6,data = list(M=xseq_2))
+mu_2_mean <- apply(mu_2, 2, mean)
+mu_2_PI <- apply(mu_2, 2, PI)
+plot(K ~ M, data=dcc)
+lines(xseq_2,mu_2_mean,lwd=2)
+shade(mu_2_PI,xseq_2)
+```
+
+```{r fit a model for N --> M (body mass)}
+library(rethinking)
+m5.8 <- quap(
+  alist(
+    M ~ dnorm(mu,sigma),
+    mu <- a+bN*N,
+    a ~ dnorm(0,0.2),
+    bN ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = dcc
+)
+precis(m5.8)
+xseq <- seq(from=min(dcc$N)-0.15, to=max(dcc$N)+0.15,length.out = 30)
+mu <- link(m5.8, data=list(N=xseq))
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+plot( M ~ N, data=dcc)
+lines(xseq, mu_mean, lwd=2)
+shade(mu_PI,xseq)
+```
+
+```{r fit a model for M--> N}
+m5.9 <- quap(
+  alist(
+    N ~ dnorm(mu,sigma),
+    mu <- a+bM*M,
+    a ~ dnorm(0,0.2),
+    bM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ), data = dcc
+)
+precis(m5.9)
+```
+
+# predictor residual plot
+```{r predictor residual plot K ~ residual(M|N)}
+mu <- link(m5.8)
+mu_mean <- apply(mu, 2, mean)
+mu_resid <- dcc$M-mu_mean
+dcc$RMN <- scale(mu_resid)
+# fit a model to K and mu_residual of M|N
+m5.10 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a+bRMN*RMN,
+    a ~ dnorm(0,0.2),
+    bRMN ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=dcc
+)
+xseq <- seq(from=min(dcc$RMN)-0.15, to=max(dcc$RMN)+0.15,length.out = 30)
+mu_2 <- link(m5.10,data = list(RMN=xseq))
+mu_mean_2 <- apply(mu_2, 2, mean)
+mu_PI_2 <- apply(mu_2, 2, PI)
+plot(K ~ RMN, data=dcc)
+lines(xseq,mu_mean_2,lwd=2)
+shade(mu_PI_2,xseq)
+precis(m5.10)
+```
+
+# counterfactual plot
+```{r creat a dataset with one predictor variable constant, the other changing and use multivariate regression model}
+#impact of changes on M(body mass) on K (kilocal per g) predictions
+M_seq <- seq(from=min(dcc$M)-0.15,to=max(dcc$M)+0.15,length.out = 30)
+pred_data <- data.frame(M=M_seq,N=0)
+# compute counterfactual mean K (mu) based on the multivariate regression model
+mu <- link(m5.7,data = pred_data)
+mu_mean <- apply(mu,2,mean)
+mu_PI <- apply(mu,2,PI)
+# simulate counterfactual K (kilocal per g) outcomes based on the multivariate regression model
+K_sim <- sim(m5.7,data = pred_data,n=1e4)
+K_PI <- apply(K_sim, 2, PI)
+# display predictions of K ~ M,holding N at constant mean of standard deviation, hiding raw data with type="n"
+plot(K ~ M,data=dcc,type="n")
+mtext("neocortex percent (std)=0")
+lines(M_seq,mu_mean)
+shade(mu_PI,M_seq)
+shade(K_PI,M_seq)
+```
+
+```{r counterfacual plot 2}
+# impact of changes on N(neocortex percent) on K (kilocal per g) predictions
+N_seq <- seq(from=min(dcc$N)-0.15,to=max(dcc$N)+0.15,length.out = 30)
+pred_data <- data.frame(N=N_seq,M=0)
+# compute conterfactual mean K (mu) based on the multivariate regression model
+mu <- link(m5.7,data = pred_data)
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+# simulate countercfactual based on the multivariate regression model
+K_sim <- sim(m5.7, data = pred_data,n=1e4)
+K_PI <- apply(K_sim, 2, PI)
+# display predictions of K ~ N, holding M at constant mean of standard deviation, hiding raw data with tyoe="n"
+plot(K~N,data=dcc,type="n")
+mtext("log body mass (std)=0")
+lines(N_seq,mu_mean)
+shade(mu_PI,N_seq)
+shade(K_PI,N_seq)
+```
+# Overthinking: Simulating a masking relationiship
+```{r}
+
+```
+
+# 5.3 Categorical variables
+## 5.3.1 Binary categories
+```{r load data Howell1}
+data("Howell1")
+d <- Howell1
+str(d)
+```
+
+### indicator variable if simply added to a linear model
+```{r prior distribution for mu for females and males}
+mu_female <- rnorm(1e4,178,20)
+mu_male <- rnorm(1e4,178,20)+rnorm(1e4,0,10)
+precis(data.frame(mu_female,mu_male))
+# resulting knowing about one catogory's data more unsure than the other cateogry, as the first one would contain two parameters
+```
+### use an index variable as indicator variable 
+```{r}
+d$sex <- ifelse(d$male==1,2,1)
+str(d$sex)
+```
+
+```{r approximmate the posterior using indicator variable to assign same distribution to each variable}
+m5.8 <- quap(
+  alist(
+    height ~ dnorm(mu,sigma),
+    mu <- a[sex],
+    a[sex] ~ dnorm(178,20),
+    sigma ~ dunif(0,50)
+  ),data=d)
+precis(m5.8,depth=2)
+# extract posterior samples and calculate the differences between categories
+post <- extract.samples(m5.8)
+post$diff_fm <- post$a[,1]-post$a[,2]
+precis(post,depth = 2)
+```
+# 5.3.2 Many categories
+```{r load the primate milk data}
+library(rethinking)
+data("milk")
+d <- milk
+```
+
+
+```{r Eload the primate milk data}
+# coerce the factor to an integer
+d$clade_id <- as.integer(d$clade)
+d$K <- scale(d$kcal.per.g)
+#dcc <- d[complete.cases(d),]
+m5.9 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a[clade_id],
+    a[clade_id] ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m5.9,depth = 2)
+labels <- paste("a[",1:4,"]:",levels(d$clade),sep="")
+plot(precis(m5.9,depth=2,pars="a"),labels=labels,xlab="expected kcal (std)")
+```
+
+```{r add another kind of categorical variable}
+set.seed(63)
+d$house <- sample(rep(1:4,each=8),size=nrow(d))
+# include house categories as another categorical indicatore in the model
+m5.10 <- quap(
+  alist(
+    K ~ dnorm(mu,sigma),
+    mu <- a[clade_id]+h[house],
+    a[clade_id] ~ dnorm(0,0.5),
+    h[house] ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data=d
+)
+labels <- paste("h[",1:4,"]:",levels(d$house),sep="")
+plot(precis(m5.10,depth = 2,pars="h"),labels=labels,xlab="expaceted kcal(std)")
+```
+
