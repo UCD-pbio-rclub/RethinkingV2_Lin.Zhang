@@ -2,7 +2,8 @@
 title: "Chapter6_HW"
 author: "Lin Zhang"
 date: "5/30/2019"
-output: html_document
+output: 
+   html_document:
    keep_md: yes
 ---
 
