@@ -5,7 +5,7 @@ date: "4/19/2019"
 output: html_document
 ---
 
-```{r compute the posterior}
+```{r grid_approximation, compute the posterior}
 p_grid <- seq(from=0, to=1, length.out=1000)
 prob_p <- rep (1,1000)
 prob_data <- dbinom(6, size = 9, prob = p_grid)
@@ -19,7 +19,7 @@ dens(samples)
 
 ## Once your model produces a posterior distribution, the model's work is done, but your work just begun 
 
-```{r intervals of defined boundaries}
+```{r R code 3.6 intervals of defined boundaries}
 sum(posterior[p_grid<0.5])
 sum(samples<0.5)/1e4
 sum(samples>0.5 & samples<0.75)/1e4
@@ -52,6 +52,7 @@ median(samples2)
 sum(posterior2*abs(0.5-p_grid2))
 # repeat the loss function for evry possible decision
 loss <- sapply(p_grid2, function(d)sum(posterior2*abs(d-p_grid)))
+plot(loss)
 p_grid2[which.min(loss)]
 median(samples2)
 ```
@@ -71,4 +72,14 @@ w <- rbinom(1e4, size = 9, prob = 0.6)
 simplehist(w)
 w2 <- rbinom(1e4, size=9, prob=samples)
 simplehist(w2)
+```
+
+
+```{r Model check two new ways of describing data}
+
+
+
+
+
+
 ```
