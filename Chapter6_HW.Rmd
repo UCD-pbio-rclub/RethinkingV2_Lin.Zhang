@@ -1,0 +1,128 @@
+---
+title: "Chapter6_HW"
+author: "Lin Zhang"
+date: "5/30/2019"
+output: html_document
+   keep_md: yes
+---
+
+# 6H1 & 6H2
+```{r Use the Waffle House data, data(WaffleDivorce), to find the total causal influence ofnum- ber ofWaffle Houses on divorce rate. Justify your model or models with a causal graph}
+library(rethinking)
+data("WaffleDivorce")
+d <- WaffleDivorce
+str(d)
+# Pop, MedianAgeMarriage, Marriage, South are intuitively variables related to divorceRate
+library(dagitty)
+dag_6H1 <- dagitty("dag{
+                   M -> P -> W -> D
+                   M -> D
+                   P <- MA -> D
+                   M <- MA <- S -> W
+                   P <- S -> D
+                   S -> M
+                  }"
+)
+coordinates(dag_6H1) <- list(x=c(P=0,M=0,MA=1,S=2,W=3,D=3),y=c(P=0,W=0,S=1,MA=2,M=3,D=3))
+plot(dag_6H1)
+adjustmentSets(dag_6H1,exposure = "W",outcome = "D")
+impliedConditionalIndependencies(dag_6H1)
+d$P <- scale(d$Population)
+d$M <- scale(d$Marriage)
+d$MA <- scale(d$MedianAgeMarriage)
+d$S <- scale(d$South)
+d$W <- scale(d$WaffleHouses)
+d$D <- scale(d$Divorce)
+pairs(~P+M+MA+S+W+D,d)
+m6H1 <- quap(
+  alist(
+    D ~ dnorm(mu,sigma),
+    mu <- a+b_WD*W+b_MD*M+b_MAD*MA+b_SD*S+b_PD*P,
+    a ~ dnorm(0,0.2),
+    b_MD ~ dnorm(0,1),
+    b_MAD ~ dnorm(0,1),
+    c(b_WD,b_PD,b_SD) ~ dnorm(0,1),
+    sigma ~ dexp(1)
+  ),data = d
+  )
+precis(m6H1)
+plot(precis(m6H1))
+
+#xseq <- seq(from=min(d$W)-0.15, to=max(d$W)+0.15, length.out = 30)
+#mu <- link(m6H1,data = list(xseq))  #? Error in eval(parse(text = lm), envir = e) : object 'W' not found
+#mu_mean <- apply(mu,2,mean)
+#mu_PI <- apply(mu, 2, PI)
+#plot(D ~ W, data=d)
+#lines(xseq, mu_mean, lwd=2)
+#shade(mu_PI, xseq)
+# Build a series of models to test the implied conditional independencies of the causal graph
+#you used in the previous problem. If any of the tests fail, how do you think the graph needs to be amended? Does the graph need more or fewer arrows? Feel free to nominate variables that aren’t in the data.
+# what does it mean by test fails
+```
+# Stat Rethinking HW Week3
+```{r }
+data("foxes")
+d <- foxes
+library(dagitty)
+dag_1 <- dagitty("dag{
+               A -> F -> W
+               F -> G
+               G -> W
+               }")
+adjustmentSets(dag_1,exposure = "A",outcome = "W")
+# no variable needs to be conditioned on to close the backdoor
+d$A <- scale(d$area)
+d$F <- scale(d$avgfood)
+d$G <- scale(d$groupsize)
+d$W <- scale(d$weight)
+m <- quap(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- a+b_AW*A+b_FW*F+b_GW*G,
+    a ~ dnorm(0,0.2),
+    b_AW ~ dnorm(0,1),
+    b_FW ~ dnorm(0,1),
+    b_GW ~ dnorm(0,1),
+    sigma ~ dexp(1)
+  ),data=d
+)
+prior <- extract.prior(m)
+library(rethinking)
+# Problem 1, prior predictive simulation
+pred_data <- data.frame(A=c(-2,2),F=c(-2,2),G=c(-2,2))
+mu <- link(m,post=prior,data = pred_data)
+plot(NULL, xlim=c(-2,2), ylim=c(-2,2))
+for(i in 1:50) lines(c(-2,2), mu[i,], col=col.alpha("black",0.3))
+# Problem 2 
+adjustmentSets(dag_1,exposure = "F",outcome = "W")
+# Thus no covariates needed to be adjust for to estimate total causal influence of food, so can use the model above
+precis(m)
+# b_FW ~ norm(0.38,0.23), thus weight is positively correlated with food, so adding food will make foexs heavier
+# Problem 3
+adjustmentSets(dag_1,exposure = "G",outcome = "W")
+# {F} need to adjust for food
+m2 <- quap(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- a+b_AW*A+b_FW*F+b_GW*G,
+    a ~ dnorm(0,0.2),
+    b_AW ~ dnorm(0,1),
+    c(b_FW,b_GW) ~ dnorm(0,1),
+    sigma ~ dexp(1)
+  ),data = d
+)
+plot(precis(m2))
+A <- seq(from=min(d$A)-0.15, to=max(d$A)+0.15, length.out = 30)
+F <- seq(from=min(d$F)-0.15, to=max(d$F)+0.15, length.out = 30)
+G <- seq(from=min(d$G)-0.15, to=max(d$G)+0.15, length.out = 30)
+# how to plot there predictor variables altoghether in posterior distribution
+# Group is discrete variable
+mu_G <- link(m2,data = list(G))
+mu_mean_G <- apply(mu_G,2,mean)
+mu_PI_G <- apply(mu_G, 2, PI)
+plot(W ~ G, data=d)
+lines(G, mu_mean_G, lwd=2)
+shade(mu_PI_G, G)
+
+```
+

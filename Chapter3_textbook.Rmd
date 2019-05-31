@@ -1,0 +1,74 @@
+---
+title: "Chapter3_textbook"
+author: "Lin Zhang"
+date: "4/19/2019"
+output: html_document
+---
+
+```{r compute the posterior}
+p_grid <- seq(from=0, to=1, length.out=1000)
+prob_p <- rep (1,1000)
+prob_data <- dbinom(6, size = 9, prob = p_grid)
+posterior <- prob_data * prob_p
+posterior <- posterior / sum(posterior)
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
+plot(samples)
+library(rethinking)
+dens(samples)
+```
+
+## Once your model produces a posterior distribution, the model's work is done, but your work just begun 
+
+```{r intervals of defined boundaries}
+sum(posterior[p_grid<0.5])
+sum(samples<0.5)/1e4
+sum(samples>0.5 & samples<0.75)/1e4
+```
+
+```{r intervals of defined mass}
+quantile(samples,0.8)
+quantile(samples,c(0.1,0.9))
+```
+
+```{r Difeerence between percentile interval and highest posterior density confidence interval}
+p_grid2 <- seq(from=0, to=1, length.out = 1000)
+prior2 <- rep (1,1000)
+likelihood2  <- dbinom(3,size = 3,prob = p_grid)
+posterior2 <- likelihood2*prior2
+posterior2 <- posterior2/sum(posterior2)
+samples2 <- sample(p_grid2, size = 1e4, replace = TRUE, prob = posterior2)
+PI(samples2, prob = 0.5)
+HPDI(samples2, prob = 0.5)
+```
+
+```{r point estimates}
+## maximum a posteriori (MAP) estimate
+p_grid2[which.max(posterior2)]
+chainmode(samples2, adj=0.01)
+## posterior mean and median
+mean(samples2)
+median(samples2)
+#caculate expected loss in point estimates if our decision p=0.5
+sum(posterior2*abs(0.5-p_grid2))
+# repeat the loss function for evry possible decision
+loss <- sapply(p_grid2, function(d)sum(posterior2*abs(d-p_grid)))
+p_grid2[which.min(loss)]
+median(samples2)
+```
+
+```{r simulate prediction}
+dbinom(0:2,size=2, prob=0.7)
+## simulate observations using probabilities
+rbinom(1, size = 2, prob = 0.7)
+# a set of 10 simulations
+rbinom(10,size = 2, prob = 0.7)
+dummy_w <- rbinom(1e5,size = 2,prob=0.7)
+table(dummy_w)/1e5
+dummy_w2 <- rbinom(1e5, size = 9, prob = 0.7)
+simplehist(dummy_w2,xlab="dummy water count")
+# Posterior Prediction Distribution
+w <- rbinom(1e4, size = 9, prob = 0.6)
+simplehist(w)
+w2 <- rbinom(1e4, size=9, prob=samples)
+simplehist(w2)
+```
