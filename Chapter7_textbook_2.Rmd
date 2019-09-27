@@ -1,0 +1,453 @@
+---
+title: "Chapter_7_textbook"
+author: "Lin Zhang"
+date: "8/4/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r}
+library(rethinking)
+library(ggplot2)
+```
+
+
+# Revisit Polynomial regression and B-sPLINES in Chapter4
+```{r}
+data(Howell1)
+d <- Howell1
+str(d)
+plot(d$weight,d$height)
+```
+
+```{r ??? build parabolic model however linear model }
+d$weight_s <- (d$weight-mean(d$weight))/sd(d$weight) # why use z-score here for normalization?
+d$weight_s2 <- d$weight_s^2 # why use square here
+m4.5 <- quap(
+  alist(
+    height ~ dnorm(mu,sigma), 
+    mu <- a+b1*weight_s+b2*weight_s2, #a is the expected value of height when weight is at its mean value, but not the mean height ??
+    a ~ dnorm(178,20),
+    b1 ~ dlnorm(0,1), #why use log normal distribution here?
+    b2 ~ dnorm(0,1),
+    sigma ~ dunif(0,50)
+    
+  ),data=d
+)
+precis(m4.5)
+```
+
+```{r plot it!}
+weight.seq <- seq(from=-2.2,to=2,length.out = 30)
+pred_dat <- list( weight_s <- weight.seq, weight_s2 <- weight_s^2) #??
+mu <- link(m4.5, data = pred_data)
+mu.mean <- apply(mu,2,mean)
+mu.PI <- apply(mu,2,PI,prob=0.89)
+sim.height <- sim(m4.5,data = pred_dat)
+height.PI <- apply(sim.height,2,PI,prob=0.89)
+plot(height ~ weight_s, d, col=col.alpha(rangi2,0.5))
+lines(weight.seq,mu.mean)
+shade(mu.PI,weight.seq)
+shade(height.PI,weight.seq)
+```
+
+## back to Chapter7
+#
+
+## revisit Predictor residual plots 5.1.4.1
+```{r}
+library(rethinking)
+data("WaffleDivorce")
+d <- WaffleDivorce
+d$A <- scale(d$MedianAgeMarriage)
+d$D <- scale(d$Divorce)
+d$M <- scale(d$Marriage)
+```
+# to compute predictor residuals, just use the other predictor to model it
+# here, use A(median age at marriage ) to model M(marriage rate)
+```{r build model of M(marriage rate) using A(median age at marriage) as predictor variable}
+m5.4 <- quap(
+  alist(
+    M ~ dnorm(mu,sigma),
+    mu <- a+bAM*A,
+    a ~ dnorm(0,0.2),
+    bAM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+
+```
+
+```{r compute the residuals by substracting the observed marriage rate from the predicted rate}
+mu <- link(m5.4) #link function
+mu_mean <- apply(mu,2,mean)
+mu_resid <- d$M-mu_mean   ## Congratulations!!just computed the residual 
+```
+
+ 7.1.1 More parameters always improve fit
+```{r build a dataframe from scratch}
+sppnames <- c("afarensis","africanus","habilis","boisei","rudolfensis","errgaster","sapiens")
+brainvolcc <- c(438,452,612,521,752,871,1350)
+masskg <- c(37.0,35.5,34.5,41.5,55.5,61.0,53.5)
+d <- data.frame(specis=sppnames,brain=brainvolcc,mass=masskg)
+plot(brainvolcc,masskg)
+str(d)
+```
+
+```{r rescale predictor and ourcome variables}
+d$mass_std <- (d$mass-mean(d$mass))/sd(d$mass) # z-score normalization for predictor variable
+d$brain_std <- d$brain/max(d$brain)
+```
+
+
+```{r 1st order model between body mass and brain size}
+m7.1 <- quap(
+  alist(
+    brain_std ~ dnorm(mu,exp(log_sigma)), # why use log here
+    mu <- a+b*mass_std,
+    a ~ dnorm(0.5,1),
+    b ~ dnorm(0,10),
+    log_sigma ~ dnorm(0,1)
+  ),data=d
+)
+```
+
+# compute R2
+```{r}
+set.seed(12)
+s <- sim(m7.1)
+r <- apply(s,2,mean)-d$brain_std
+resid_var <- var2(r)
+outcome_var <- var2(d$brain_std)
+1-resid_var/outcome_var
+```
+```{r build a function to calculate R2}
+R2_is_bad <- function(quap_fit){
+  s <- sim(quap_fit,refresh=0)
+  r <- apply(s,2,mean)-d$brain_std
+  1- var2(r)/var(d$brain_std)
+}
+```
+
+```{r polynomial models between body mass and brain size}
+# 2nd order model
+m7.2 <- quap(
+  alist(
+    brain_std ~ dnorm(mu,exp(log_sigma)),
+    mu <- a+b[1]*mass_std+b[2]*mass_std^2,
+    a ~ dnorm(0.5,1),
+    b ~ dnorm(0,10),
+    log_sigma ~ dnorm(0,1)
+  ),data = d, start = list(b=rep(0,2)) #list & rep?
+)
+# 3rd order model
+m7.3 <- quap( alist(
+brain_std ~ dnorm( mu , exp(log_sigma) ), mu <- a + b[1]*mass_std + b[2]*mass_std^2 + b[3]*mass_std^3,
+a ~ dnorm( 0.5 , 1 ), b ~ dnorm( 0 , 10 ), log_sigma ~ dnorm( 0 , 1 )
+), data=d , start=list(b=rep(0,3)) )
+# 4th order model
+m7.4 <- quap( alist(
+brain_std ~ dnorm( mu , exp(log_sigma) ), mu <- a + b[1]*mass_std + b[2]*mass_std^2 + b[3]*mass_std^3+b[4]*mass_std^4,
+a ~ dnorm( 0.5 , 1 ), b ~ dnorm( 0 , 10 ), log_sigma ~ dnorm( 0 , 1 )
+), data=d , start=list(b=rep(0,4)) )
+#5th order model
+m7.5 <- quap( alist(
+brain_std ~ dnorm( mu , exp(log_sigma) ), mu <- a + b[1]*mass_std + b[2]*mass_std^2 + b[3]*mass_std^3 + b[4]*mass_std^4 + b[5]*mass_std^5,
+a ~ dnorm( 0.5 , 1 ), b ~ dnorm( 0 , 10 ), log_sigma ~ dnorm( 0 , 1 )
+), data=d , start=list(b=rep(0,5)) )
+# 6th order model
+m7.6 <- quap( alist(
+brain_std ~ dnorm( mu , 0.001 ), mu <- a + b[1]*mass_std + b[2]*mass_std^2 + b[3]*mass_std^3 + b[4]*mass_std^4 + b[5]*mass_std^5 + b[6]*mass_std^6,
+a ~ dnorm( 0.5 , 1 ), b ~ dnorm( 0 , 10 )
+), data=d , start=list(b=rep(0,6)) )
+```
+
+```{r plot model}
+m <- c(m7.1,m7.2,m7.3,m7.4,m7.5,m7.6)
+for (i in m){
+#m <- paste("m7.",i,sep = "")
+post <- extract.samples(i)
+mass_seq <- seq(from=min(d$mass_std), to = max(d$mass_std), length.out = 100)
+l <- link(i,data = list(mass_std=mass_seq))
+mu <- apply(l,2,mean)
+ci <- apply(l,2,PI)
+plot(brain_std ~ mass_std, data=d)
+lines(mass_seq,mu)
+shade(ci,mass_seq)
+}
+```
+
+```{r fit a linear model using OLS ordinar least squares}
+m7.1_OLS <- lm(brain_std ~ mass_std,data = d)
+post <- extract.samples(m7.1_OLS)
+```
+
+# Information entropy
+```{r}
+# suppose p rain is 0.3, p shine is 0.7
+p <- c(0.3,0.7)
+-sum(p*log(p))
+
+```
+# measure accuracy using relative divergence
+```{r}
+library(rethinking)
+set.seed(1)
+lppd(m7.1, n=1e4)# log-pointwise predictive density, larger the better average accuracy
+#Note Deviance, is -2 * the lppd value, so smaller the better
+```
+# compute log-scoe for models
+```{r}
+set.seed(1)
+sapply(list(m7.1,m7.2,m7.3,m7.4,m7.5,m7.6),function(m)sum(lppd(m)))
+```
+# Simulation
+```{r in-out sample simulation R code 7.17}
+N <- 20 
+kseq <- 1:5
+dev <- sapply(kseq, function(k){
+  print(k);
+  r <- replicate(1e4,sim.train.test(N = N,k = k));
+  c(mean(r[1,]),mean(r[2,]),sd(r[1,]),sd(r[2,]))
+})
+# taking so long, plot part not included
+```
+ 
+# predictive accuracy is not equal to causal inference
+# revisit model 6.5,6.6,6.7 calculate their information criteria parameters
+```{r}
+library(rethinking)
+set.seed(71)
+# number of plants
+N <- 100
+
+# simulate initial heights
+h0 <- rnorm(N,10,2)
+
+# assign treatments and simulate fungus and growth
+treatment <- rep(0:1, each=N/2)
+fungus <- rbinom(N,size = 1, prob = 0.5-treatment*0.4) # the probability of fungus is a function of treatment with assigned intercept and beta parameter
+h1 <- h0+rnorm(N,5-3*fungus) # the increase in height is a normal distribution with mean value as a function of fungus appearance, intercpt and beta parameter assigned
+
+# compose a clean data frame
+d <- data.frame(h0=h0,h1=h1,treatment=treatment,fungus=fungus)
+precis(d)
+hist(h0)
+hist(h1)
+```
+
+
+# Data is simulated and generating model known, now compare different model building method
+```{r build prior for growth proportion p}
+# p =h1/h0 so later plant height/initial plant height 
+#p is positive and could be less than 1, use Log-Normal distribution here
+sim_p <- rlnorm(1e4,0,0.25) #how to get the 0.25 here?
+precis(data.frame(sim_p))
+hist(sim_p) 
+```
+
+# measure the average growth use simulated growth proportion
+```{r}
+m6.6 <- quap(
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p ~ dlnorm(0,0.25),  #? prior
+    sigma ~ dexp(1)  #? exponential distribution
+  ),data = d
+)
+precis(m6.6)
+hist(h1)
+```
+# include the treatment and fungus variables
+```{r}
+m6.7 <- quap(
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p <- a+bt*treatment+bf*fungus,
+    a ~ dlnorm(0,0.2),
+    bt ~ dnorm(0,0.5),
+    bf ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d
+)
+precis(m6.7)
+```
+# omit the post-treatment variable fungus
+```{r}
+# including post-treatment variable can mask the treatment itself
+# also can control for pre-treatment differences
+m6.8 <- quap(
+  alist(
+    h1 ~ dnorm(mu,sigma),
+    mu <- h0*p,
+    p <- a+bt*treatment,
+    a ~ dlnorm(0,0.2),
+    bt ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+    ),data = d
+)
+precis(m6.8)
+```
+
+# 7.5 Using cross-validation and information criteria
+```{r WAIC calculation}
+# m6.7
+set.seed(11)
+WAIC(m6.7)
+#lppd, out of sample deviance
+```
+
+```{r compare models}
+set.seed(77) 
+compare(m6.6,m6.7,m6.8) 
+#WAIC smaller the better
+#pWAIC penalty term, close to number of dimensions in the posterior of each model
+# compare models by expected out-of-sample accuracy using dSE, difference in Standard Deviation
+#99% (corresponding to a z-score of about 2.6) interval of the difference
+40.9+c(-1,1)*10.48*2.6
+plot(compare(m6.6,m6.7,m6.8))
+# WAIC cannot be used to infer causation
+# each Row of difference is that to the top model, but do include inter-model comparison
+```
+
+```{r m6.8 with treatment only, with m6.6 the intercept model}
+set.seed(92)
+waic_m6.6 <- WAIC(m6.6, pointwise = TRUE)
+diff_m6.6_m6.8 <- waic_m6.6- waic_m6.8
+n <- length(waic_m6.6)
+sqrt(n*var(diff_m6.6_m6.8))
+```
+
+```{r}
+set.seed(93)
+compare(m6.6,m6.7,m6.8)@dSE 
+#compare(m6.6,m6.7,m6.8)$dSE
+```
+
+# use WAIC and causal inference for real data
+```{r set up life history data for 301 primate species}
+data("Primates301")
+d <- Primates301
+```
+
+```{r standardize observed variables}
+# means are subtracted out
+d$log_L <- scale(log(d$longevity))
+d$log_B <- scale(log(d$brain))
+d$log_M <- scale(log(d$body))
+```
+# simulate regression lines from prior
+# missing values
+```{r}
+sapply(d[,c("log_L","log_B","log_M")], function(x)sum(is.na(x)))
+d2 <- d[complete.cases(d$log_L, d$log_M, d$log_B),]
+nrow(d)
+nrow(d2)
+```
+```{r approximate the posterior}
+m7.8 <- quap(
+  alist(
+    log_L ~ dnorm(mu,sigma),
+    mu <- a+bM*log_M+bB*log_B,
+    a ~ dnorm(0,0.1),
+    bM ~ dnorm(0,0.5),
+    bB ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m7.8)
+```
+
+```{r simpler model with B as only predictor variable}
+m7.9 <- quap(
+  alist(
+    log_L ~ dnorm(mu,sigma),
+    mu <- a+bB*log_B,
+    a ~ dnorm(0,0.1),
+    bB ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m7.9)
+```
+
+```{r simpler model with M as only predictor variable}
+m7.10 <- quap(
+    alist(
+    log_L ~ dnorm(mu,sigma),
+    mu <- a+bM*log_M,
+    a ~ dnorm(0,0.1),
+    bM ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m7.10)
+```
+
+```{r compare models by WAIC}
+set.seed(301)
+compare(m7.8,m7.9,m7.10)
+plot(compare(m7.8,m7.9,m7.10))
+```
+
+```{r compare posterior distribution}
+plot(coeftab(m7.8,m7.9,m7.10))#pars=c("bM","bB"))
+cor(d2$log_B,d2$log_M)
+```
+
+```{r}
+library(ggplot2)
+plot(d2$log_B~d2$log_M)
+
+lm_eqn <- function(df){
+    m <- lm(d2$log_B ~ d2$log_M, df);
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+         list(a = format(unname(coef(m)[1]), digits = 2),
+              b = format(unname(coef(m)[2]), digits = 2),
+             r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
+
+#p1 <- p + geom_text(x = 25, y = 300, label = lm_eqn(df), parse = TRUE)
+
+ggplot(d2,aes(x=log_M,y = log_B))+
+  geom_smooth(method="lm",formula=y~x)+
+  geom_point()+
+  geom_text(x=0,y=1,label = lm_eqn(d2), parse = TRUE)
+
+```
+# WAIC is pointwise
+```{r}
+waic_m7.8 <- WAIC(m7.8,pointwise = TRUE)
+waic_m7.9 <- WAIC(m7.9,pointwise = TRUE)
+str(waic_m7.8)
+```
+# see which species each model does better at
+```{r}
+# compute point scaling
+x <- d2$log_B-d2$log_M
+x <- x-min(x)
+x <- x/max(x)
+# draw the plot
+plot(waic_m7.8 - waic_m7.9, d2$log_L, xlab="pointwise difference in WAIC", ylab="log longevity(std)",pch=21, col=col.alpha("black",0.8),cex=1+x,lwd=2,bg=col.alpha(rangi2,0.4))
+abline(v=0,lty=2)
+abline(h=0,lty=2)
+```
+# a different DAG
+```{r a model with brain size as outcome}
+m7.11 <- quap(
+  alist(
+    log_B ~ dnorm(mu,sigma),
+    mu <- a+ bM*log_M+bL*log_L,
+    a ~ dnorm(0,0.1),
+    bM ~ dnorm(0,0.5),
+    bL ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = d2
+)
+precis(m7.11)
+```
+

@@ -23,7 +23,7 @@ dag_6H1 <- dagitty("dag{
                    P <- S -> D
                    S -> M
                   }"
-)
+)    # layout=TRUE
 coordinates(dag_6H1) <- list(x=c(P=0,M=0,MA=1,S=2,W=3,D=3),y=c(P=0,W=0,S=1,MA=2,M=3,D=3))
 plot(dag_6H1)
 adjustmentSets(dag_6H1,exposure = "W",outcome = "D")
@@ -38,11 +38,11 @@ pairs(~P+M+MA+S+W+D,d)
 m6H1 <- quap(
   alist(
     D ~ dnorm(mu,sigma),
-    mu <- a+b_WD*W+b_MD*M+b_MAD*MA+b_SD*S+b_PD*P,
+    mu <- a+b_WD*W+b_MD*M+b_MAD*MA+b_SD*S+b_PD*P, # condition is not including all variables here
     a ~ dnorm(0,0.2),
     b_MD ~ dnorm(0,1),
     b_MAD ~ dnorm(0,1),
-    c(b_WD,b_PD,b_SD) ~ dnorm(0,1),
+    c(b_WD,b_PD,b_SD) ~ dnorm(0,1), ## what is this?
     sigma ~ dexp(1)
   ),data = d
   )
