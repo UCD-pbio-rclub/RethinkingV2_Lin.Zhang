@@ -1,0 +1,338 @@
+---
+title: "Chapter_10_HW"
+author: "Lin Zhang"
+date: "11/3/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+library(rethinking)
+library(tidyverse)
+```
+
+```{r data import 01}
+data("Wines2012") # no replicates in the dataset
+head(Wines2012)
+str(Wines2012)
+summary(Wines2012$score)
+d <- Wines2012
+```
+
+```{r data examine 01}
+unique(d$judge)
+unique(d$wine)
+summary(d$score)
+```
+# model score by variation among judges and wines
+## use ratio agianst max as scale for score, cannot converge MCMC!
+```{r data standardization 01}
+# sapply(d[,c("score","judge","wine")],function(x)sum(is.na(x))) # no missing data in the three variables
+# d$S <- d$score/max(d$score) # not well mixed chain generated, also when trying constructing two models, the second one cannot run through with prompt of "recompile to avoid R session crash"
+# d$judge_id <- as.integer(d$judge)
+# #d$J <- scale(d$judege_id)
+# d$wine_id <- as.integer(d$wine)
+# #d$W <- scale(d$wine_id)
+```
+
+```{r DAG plot 01}
+library(dagitty)
+dag <- dagitty("dag{
+J->S
+W->S
+}")
+coordinates(dag) <- list(x=c(W=0,J=2,S=1),y=c(S=0,W=0,J=0))
+drawdag(dag)
+```
+
+## use Z-score as scale for score
+```{r scale S use scale 01}
+sapply(d[,c("score","judge","wine")],function(x)sum(is.na(x))) # no missing data in the three variables
+d$S <- scale(d$score) # why use scale here
+d$judge_id <- as.integer(d$judge)
+#d$J <- scale(d$judege_id)]
+d$wine_id <- as.integer(d$wine)
+#d$W <- scale(d$wine_id)
+```
+
+```{r construct a clean data list Rcode 9.11 01}
+dat_slim <- list(
+  score_std = d$S,
+  wine = as.integer(d$wine_id),
+  judge = as.integer(d$judge_id)
+)
+str(dat_slim)
+```
+
+```{r build model for score using two index variable wine_id and judge_id Rcode 8.13 01}
+# S ~ Normal(u,sigma), ui=a[i]+beta_w(w-w_mean)+beta_judge(j-j_mean)
+# why use mcmc is better here
+m1 <- ulam(alist(
+    score_std ~ dnorm(mu,sigma),
+    mu <- a_w[wine]+a_J[judge],  #interaction between categorical variables is just additive?
+    a_w[wine] ~ dnorm(0,1),
+    a_J[judge] ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data = dat_slim, 
+  chains = 4,
+  cores = 4, 
+  iter = 2000  # iteration time setting?
+)
+# if not run with a fresh R session, prompt recompiling to aviod R session crash
+```
+
+```{r 01 Diagnostics_01}
+show(m1)  
+precis(m1,2)  #n_eff is ~1000-2000 for a compared to 4000 total sample number
+plot(precis(m1,2)) 
+# interpret variation among individual judges and individual wines
+# variation among judges is bigger than that among wines, might due to original data structure, each judge is examing 20 different wines
+# plot the differences?
+# Judge 5 gives the highest rating, Judge 8 gives the lowest rating
+# Wine 4 was rated best on average, wine 18 was justed worst on average
+```
+
+```{r 01 Diagnostics_02,fig.height=20,fig.width=20}
+pairs(m1)
+```
+
+```{r 01 Diagnostics_03}
+traceplot(m1)
+```
+
+```{r 01 Diagnostics_04}
+trankplot(m1)
+```
+
+```{r 01 extract prior}
+set.seed(7)
+prior <- extract.prior(m1)
+str(prior)
+```
+```{r 01 plot prior}
+data <- data.frame(judge=sample(1:9,1000,replace = TRUE),
+                   wine=sample(1:20,1000,replace = TRUE))
+prior.score <- link(m1,data,post=prior)
+dens(prior.score)
+dens(dat_slim$score) # a bit weird
+```
+
+```{r 01 adopted from chapter 8 tulip example} 
+##???
+par(mfrow=c(3,3))
+for (j in 1:9) {
+  idx <- which(dat_slim$judge==j) #fixed judge
+  plot(dat_slim$wine[idx],dat_slim$score_std[idx],xlim=c(1,20),ylim=c(0.3,1),
+       xlab="wine",ylab="score",pch=16,col=rangi2)
+  mu <- link(m1,post=prior,data = data.frame(judge=j,wine=1:20))
+  for(i in 1:20)lines(1:20,mu[i,],col=col.alpha("blue",0.3))
+}
+```
+
+## 2. consider three features of wines and judges
+## don't include interaction effects, but model based on flight, wine.amer, judge.amer, omit individual judge and wine index variables
+```{r 02 data import}
+data("Wines2012") # no replicates in the dataset
+head(Wines2012)
+str(Wines2012)
+summary(Wines2012$score)
+d <- Wines2012
+```
+
+```{r 02 data examine}
+unique(d$judge.amer)
+unique(d$wine.amer)
+unique(d$flight)
+summary(d$score)
+```
+
+## use Z-score as scale for score
+```{r 02 scale S use scale}
+sapply(d[,c("score","judge","wine","flight","wine.amer","judge.amer")],function(x)sum(is.na(x))) # no missing data in the three variables
+d$S <- scale(d$score) # why use scale here
+d$judge_amer_id <- as.integer(d$judge.amer)
+#d$J <- scale(d$judege_id)]
+d$wine_amer_id <- as.integer(d$wine.amer)
+d$flight_id <- as.integer(d$flight)
+unique(d$flight_id)
+unique(d$judge_amer_id)
+unique(d$wine_amer_id)
+#d$W <- scale(d$wine_id)
+
+```
+
+```{r 02 construct a clean data list Rcode 9.11}
+dat_slim <- list(
+  score_std = d$S,
+  wine_id = as.integer(d$wine_amer_id)+1, # why 0 1 cannot go through ulam model below
+  judge_id = as.integer(d$judge_amer_id)+1,
+  flight_id = as.integer(d$flight_id)
+)
+str(dat_slim)
+```
+
+```{r 02 build model for score using two index variable wine_id and judge_id Rcode 8.13}
+# S ~ Normal(u,sigma), ui=a[i]+beta_w(w-w_mean)+beta_judge(j-j_mean)
+# why use mcmc is better here
+m2 <- ulam(alist(
+    score_std ~ dnorm(mu,sigma),
+    mu <- a_w[wine_id]+a_J[judge_id]+a_f[flight_id],  #interaction between categorical variables is just additive?
+    a_w[wine_id] ~ dnorm(0,1),
+    a_J[judge_id] ~ dnorm(0,1),
+    a_f[flight_id] ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data = dat_slim, 
+  chains = 4,
+  cores = 4, 
+  iter = 2000  # iteration time setting?
+)
+# if not run with a fresh R session, prompt recompiling to aviod R session crash
+```
+
+
+```{r 02 extract prior}
+set.seed(7)
+prior <- extract.prior(m2)
+str(prior)
+```
+
+```{r 02 plot prior}
+data <- data.frame(judge_id=sample(0:1,1000,replace = TRUE)+1,
+                   wine_id=sample(0:1,1000,replace = TRUE)+1,
+                   flight_id=sample(1:2,1000,replace = TRUE))
+prior.score <- link(m2,data,post=prior)
+dens(prior.score) # looks alright
+dens(dat_slim$score) # a bit weird
+```
+
+```{r 02 check the chains}
+show(m2)
+precis(m2,2)
+plot(precis(m2,2))
+# differences between wines and judges
+# American wines have slightly lower score than French, American judges gave higher score than French judges, differences are minor
+# difference among judge categories are bigger than that of wine origin catogires
+# wine catogries, i.e. either white or red wine does not influence the scores of wine
+# Related to results in Problem1, differences in judge or wine is not due to wine flight or country/origin of judge/wine
+```
+
+
+```{r 02 Diagnostics_02,fig.height=20,fig.width=20}
+pairs(m2)
+```
+
+```{r 02 Diagnostics_03}
+traceplot(m2)
+```
+
+```{r 02 Diagnostics_04}
+trankplot(m2)
+```
+
+## 3. now consider two-way interactions among the three features
+
+```{r 03 data import}
+rm(list = ls(all.names = TRUE))
+data("Wines2012") # no replicates in the dataset
+head(Wines2012)
+str(Wines2012)
+summary(Wines2012$score)
+d <- Wines2012
+```
+
+```{r 03 data examine}
+unique(d$judge.amer)
+unique(d$wine.amer)
+unique(d$flight)
+summary(d$score)
+```
+
+## use Z-score as scale for score
+```{r 03 scale S use scale}
+sapply(d[,c("score","judge","wine","flight","wine.amer","judge.amer")],function(x)sum(is.na(x))) # no missing data in the three variables
+d$S <- scale(d$score) # why use scale here
+d$judge_amer_id <- as.integer(d$judge.amer)
+#d$J <- scale(d$judege_id)]
+d$wine_amer_id <- as.integer(d$wine.amer)
+d$flight_id <- as.integer(d$flight)
+unique(d$flight_id)
+unique(d$judge_amer_id)
+unique(d$wine_amer_id)
+#d$W <- scale(d$wine_id)
+
+```
+
+```{r 03 construct a clean data list Rcode 9.11}
+dat_slim <- list(
+  score_std = d$S,
+  wine_id = as.integer(d$wine_amer_id)+1, # why 0 1 cannot go through ulam model below
+  judge_id = as.integer(d$judge_amer_id)+1,
+  flight_id = as.integer(d$flight_id)
+)
+str(dat_slim)
+```
+
+```{r 03 build model for score using two index variable wine_id and judge_id Rcode 8.13}
+# S ~ Normal(u,sigma), ui=a[i]+beta_w(w-w_mean)+beta_judge(j-j_mean)
+# why use mcmc is better here
+m3 <- ulam(alist(
+    score_std ~ dnorm(mu,sigma),
+    mu <- a_w[wine_id]+
+          a_J[judge_id]+
+          a_f[flight_id]+
+          i_f_w[flight_id]*(wine_id-1)+ # interaction between flight and wine origin, #1 if american wine, 0 if french wine, assume there is more uncertainty in American wine?  # as seen in Problem 2, no difference in wine flight, why here examine interaction of wine flight with others
+          i_f_j[flight_id]*(judge_id-1)+ # interaction between flight and judge country,# 1 if american judge, 0 if french judge, assume there is more uncertainty in American judge?
+          i_w_j[wine_id]*(judge_id-1), # interaction between wine origin and judge country, # 1 of american judge, 0 if french judge, assume there is more uncertainty in American judge?
+    a_w[wine_id] ~ dnorm(0,1),
+    a_J[judge_id] ~ dnorm(0,1),
+    a_f[flight_id] ~ dnorm(0,1),
+    i_f_w[flight_id] ~ dnorm(0,.5),# what is the meaning of [flight_id] in this parameter?? 
+    i_f_j[flight_id] ~ dnorm(0,.5),
+    i_w_j[wine_id] ~ dnorm(0,.5),
+    sigma ~ dexp(1)),
+  data = dat_slim, 
+  chains = 4,
+  cores = 4, 
+  iter = 2000  # iteration time setting?
+)
+# if not run with a fresh R session, prompt recompiling to aviod R session crash
+```
+
+
+```{r 03 extract prior}
+set.seed(7)
+prior <- extract.prior(m3)
+str(prior)
+```
+
+```{r 03 plot prior}
+data <- data.frame(judge_id=sample(0:1,1000,replace = TRUE)+1,
+                   wine_id=sample(0:1,1000,replace = TRUE)+1,
+                   flight_id=sample(1:2,1000,replace = TRUE))
+prior.score <- link(m3,data,post=prior)
+dens(prior.score) # looks alright, change bandwidth?
+dens(dat_slim$score) # a bit weird
+```
+
+```{r 03 check the chains}
+show(m3)
+precis(m3,2)
+plot(precis(m3,2))
+##???
+# white wines has a larger interaction with wine origin, i.e. American white wine and Frech white wine change the score !!
+```
+
+```{r 03 Diagnostics_02,fig.height=20,fig.width=20}
+pairs(m3)
+```
+
+```{r 03 Diagnostics_03}
+traceplot(m3)
+```
+
+```{r 03 Diagnostics_04}
+trankplot(m3)
+```
+
+

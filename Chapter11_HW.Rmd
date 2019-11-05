@@ -1,0 +1,124 @@
+---
+title: "Chapter11_HW"
+author: "Lin Zhang"
+date: "11/2/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+library(rethinking)
+library(tidyverse)
+```
+
+# 10E1. If an event has probability 0.35, what are the log-odds of this event?
+```{r}
+log(0.35/(1-0.35))
+logit(.35)
+```
+# 10E2. If an event has log-odds 3.2, what is the probability of this event?
+```{r}
+inv_logit(3.2)
+exp(3.2)/(1+exp(3.2))
+```
+
+#10E3. Suppose that a coefficient in a logistic regression has value 1.7. What does this imply about
+the proportional change in odds of the outcome?
+```{r}
+#???
+inv_logit(1.7)
+```
+
+#10M1. As explained in the chapter, binomial data can be organized in aggregated and disaggregated
+forms, without any impact on inference. But the likelihood of the data does change when the data are
+converted between the two formats. Can you explain why?
+```{r}
+
+```
+
+# Week6_Problem_1 NWO fund
+```{r data load 01}
+data("NWOGrants")
+d <- NWOGrants
+str(d)
+```
+
+```{r }
+#build model for total effect of gender on grant awards
+d$gid <- ifelse(d$gender=="m",1,2)
+m1.1 <- quap(
+  alist(
+    awards ~ dbinom(applications,p),
+    logit(p) <- a[gid],
+    a[gid] ~ dnorm(0,1.5)
+    ),data = d
+  )
+precis(m1.1,depth = 2)
+```
+
+```{r }
+#compute contrast on the logit scale relative and outcome scale absolute
+post <- extract.samples(m1.1)
+diff_a <- post$a[,1]-post$a[,2]
+diff_p <- inv_logit(post$a[,1])-inv_logit(post$a[,2])
+precis(list(diff_a=diff_a,diff_p=diff_p))
+# in general, across discipline, male is 0.03 higher in probablity space to get awarded
+```
+
+```{r DAG}
+library(dagitty)
+dag1 <- dagitty("dag{
+                G->D
+                D->A
+                G->A
+                }"
+)
+coordinates(dag1) <- list(x=c(G=0,D=1,A=2),y=c(G=0,A=0,D=1))
+drawdag(dag1)
+```
+
+```{r }
+#build model for total effect of gender on grant awards
+d$dis_id <- rep(1:9,each=2)
+m1.2 <- quap(
+  alist(
+    awards ~ dbinom(applications,p),
+    logit(p) <- a[gid]+delta[dis_id],
+    a[gid] ~ dnorm(0,1.5),
+    delta[dis_id] ~ dnorm(0,1.5)
+  ),data = d
+)
+precis(m1.2,depth = 2)
+```
+
+```{r calculate contrasts}
+post <- extract.samples(m1.2)
+diff_a <- post$a[,1]-post$a[,2]
+diff_p <- inv_logit(post$a[,1])-inv_logit(post$a[,2])
+precis(list(diff_a=diff_a,diff_p=diff_p))
+# condition on  discipline, male is 0.02 higher in probablity space to get awarded
+```
+
+# Consider an unobserved confound
+```{r DAG2}
+library(dagitty)
+dag1 <- dagitty("dag{
+                G->D
+                D->A
+                G->A
+                U->D
+                U->A
+                }"
+)
+coordinates(dag1) <- list(x=c(G=0,D=0,A=1,U=1),y=c(G=0,A=0,D=1,U=1))
+drawdag(dag1)
+```
+
+```{r}
+# conditional on discipline causes gender and unobserved confound(such as career stages) to be correlated, the collider is open
+# it does not provide an un-confounded estimate of the direct path from gender to an award, as the backdoor is open through the unobserved confound
+# simulate?
+# but for a regression conditioning on both gender adn discipline to suggest zero influence??
+```
+
