@@ -1,7 +1,7 @@
 ---
 title: "Chapter11_textbook"
 author: "Lin Zhang"
-date: "10/30  /2019"
+date: "10/30/2019"
 output: html_document
 ---
 
@@ -26,6 +26,7 @@ unique(d$prosoc_left)
 ```{r predic pulled_left as outcome with prosoc_left and condition as predictor}
 d$treatment <- 1+ d$prosoc_left+2*d$condition
 xtabs(~treatment+prosoc_left+condition,d)
+# display of analysis design?
 ```
 # model building exploration
 # prior predictive simulation
@@ -65,6 +66,7 @@ m11.2 <- quap(
 set.seed(1999)
 prior <- extract.prior(m11.2,n=1e4)
 p <- sapply(1:4,function(k)inv_logit(prior$a+prior$b[,k]))
+# plot the absolute prior difference between first two treatments
 dens(abs(p[,1]-p[,2]),adj = 0.1)
 ```
 
@@ -114,6 +116,8 @@ plot(precis(as.data.frame(p_left)),xlim=c(0,1))
 ```{r examine treatment effects}
 labs <- c("R/N","L/N","R/P","L/P")
 plot(precis(m11.4,depth = 2,pars = "b"),labels=labs)
+# is the individual effect of chimp conditoned on alreadly in this case?
+# in above figure, 4 chimps tend to pull right, three tend to pull left, but in below, left pulled in general has higher value than right pulled ???
 ```
 
 ```{r calculate contrast between no-partner/partner}
@@ -126,8 +130,9 @@ plot(precis(diffs))
 # no evidence of prosocial choice
 ```
 ```{r summarize the proportions of left pulls for each actor in each treatment and then plot against the posterior predictions}
-pl <- by( d$pulled_left , list( d$actor , d$treatment ) , mean )
+pl <- by( d$pulled_left , list( d$actor , d$treatment ) , mean ) # didn't see it as a matrix form exhibiting pl
 pl[1,]
+# model will make predictions for these values
 ```
 
 ```{r posterior prediction check}
@@ -160,6 +165,7 @@ p_ci <- apply( p_post , 2 , PI )
 #The model expects almost no change when adding a partner. Most of the variation in predictions comes from the actor intercepts. Handedness seems to be the big story of this experiment.
 ```
 
+## build model without interaction effect as seem above no obvious interaction effect observed 
 ```{r build index variables split location of prosocial option and partner}
 d$side <- d$prosoc_left +1 # right 1, left 2
 d$cond <- d$condition+1 # no partner 1, partner 2 # add 1 to feed into ulam
@@ -315,5 +321,63 @@ postcheck( m11.8 , n=1e4 )
 ```{r}
 # over-parameterized
 pairs(m11.8)
+```
+
+##11.2 Poission Regression
+```{r simulate binomial process of 1000,0.001}
+y <- rbinom(1e5,1000,1/1000)
+c(mean(y),var(y))
+```
+#11.2.1
+```{r}
+library(rethinking)
+data(Kline)
+d <- Kline
+```
+
+```{r data transformation}
+d$P <- scale(log(d$population))
+d$contact_id <- ifelse(d$contact=="high",2,1)
+```
+
+```{r prior predictive simulation}
+
+```
+
+```{r build model and approximate posterior distributin}
+dat <- list(
+  T = d$total_tools,
+  P = d$P,
+  cid = d$contact_id
+)
+```
+
+```{r compare models with or w/o interactions}
+m11.9 <- ulam(
+  alist(
+    T ~ dpois(lambda),
+    log(lambda) <- a,
+    a ~ dnorm(3,0.5)
+  ),data = dat,chains = 4, log_lik = TRUE
+)
+```
+
+```{r interaction model}
+m11.10 <- ulam(
+  alist(
+    T ~ dpois(lambda),
+    log(lambda) <- a[cid]+b[cid]*P,
+    a[cid] ~ dnorm(3,0.5),
+    b[cid] ~ dnorm(0,0.2)
+  ),data = dat, chains = 4, log_lik = TRUE
+)
+```
+
+```{r compare two models}
+compare(m11.9,m11.10,func = LOO)
+```
+## 11.2.2 Negative binomial (gamma-Poisson) models 
+```{r}
+
 ```
 
