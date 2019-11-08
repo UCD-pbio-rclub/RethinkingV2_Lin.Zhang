@@ -1,0 +1,66 @@
+---
+title: "Chapter11_HW"
+author: "Lin Zhang"
+date: "11/8/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+```{r}
+library(rethinking)
+```
+
+#10E4. Why do Poisson regressions sometimes require the use of an offset? Provide an example.
+```{r}
+
+```
+
+#10M2. If a coefficient in a Poisson regression has value 1.7, what does this imply about the change in the outcome?
+```{r}
+
+```
+
+#10M3. Explain why the logit link is appropriate for a binomial generalized linear model.
+```{r}
+# 
+```
+
+#10M4. Explain why the log link is appropriate for a Poisson generalized linear model.
+```{r}
+#Poisson distribution has one parameter, which is a positive value, log link will always keep it positive
+```
+
+#10H4. The data contained in data(salamanders) are counts of salamanders (Plethodon elongatus) from 47 different 49-m2 plots in northern California.175 The column SALAMAN is the count in each plot, and the columns PCTCOVER and FORESTAGE are percent of ground cover and age of trees in the plot, respectively. You will model SALAMAN as a Poisson variable.
+#(a) Model the relationship between density and percent cover, using a log-link (same as the example in the book and lecture). Use weakly informative priors of your choosing. Check the quadraticapproximation again, by comparing map to map2stan. Then plot the expected counts and their 89% interval against percent cover. In which ways does the model do a good job? In which ways does it do a bad job?
+#(b) Can you improve the model by using the other predictor, FORESTAGE? Try any models you think useful. Can you explain why FORESTAGE helps or does not help with prediction?
+```{r}
+data(salamanders)
+d <- salamanders
+```
+
+```{r}
+dat <- list(
+  P = d$PCTCOVER,
+  D = d$SALAMAN,
+  cid = d$SITE)
+```
+
+```{r} 
+m1 <- quap(   # use quaratic? # R session aborted using ulam
+  alist(
+    D ~ dpois(lambda),
+    log(lambda) <- a[cid]+b[cid]*P,
+    a[cid] ~ dnorm(3,0.5),
+    b[cid] ~ dnorm(0,0.2)
+  ),data = dat
+)
+```
+
+# posterior prediction check
+```{r plot expected counts and their 89% interval agianst percent cover}
+k <- LOOPk(m1)
+plot(dat$P,dat$D, xlab="PCTCOVER",ylab="DENSITY",col=rangi2,pch=dat$cid, lwd=2, ylim=c(0,15),cex=1+normalize(k))
+ns <- 100
+P_seq <- seq(from=-1.4,to = 3, length.out = ns)
+```
+
