@@ -23,19 +23,13 @@ inv_logit(3.2)
 exp(3.2)/(1+exp(3.2))
 ```
 
-#10E3. Suppose that a coefficient in a logistic regression has value 1.7. What does this imply about
-the proportional change in odds of the outcome?
-```{r}
-#???
-inv_logit(1.7)
-```
+#10E3. Suppose that a coefficient in a logistic regression has value 1.7. What does this imply about the proportional change in odds of the outcome?
+log(odds)=a+b*x, b=1.7 
+e^1.7/e^1=e^0.7, increase the probability of the event by 70%
 
-#10M1. As explained in the chapter, binomial data can be organized in aggregated and disaggregated
-forms, without any impact on inference. But the likelihood of the data does change when the data are
-converted between the two formats. Can you explain why?
-```{r}
-
-```
+#10M1. As explained in the chapter, binomial data can be organized in aggregated and disaggregated forms, without any impact on inference. But the likelihood of the data does change when the data are converted between the two formats. Can you explain why?
+?? 
+extra parameter, extra factor
 
 # Week6_Problem_1 NWO fund
 ```{r data load 01}
@@ -120,5 +114,212 @@ drawdag(dag1)
 # it does not provide an un-confounded estimate of the direct path from gender to an award, as the backdoor is open through the unobserved confound
 # simulate?
 # but for a regression conditioning on both gender adn discipline to suggest zero influence??
+```
+
+# Chapter 11.2 problems
+
+##10E4. 
+Why do Poisson regressions sometimes require the use of an offset? Provide an example.
+```{r}
+# Possion regressions reflect count of an event over a fixed interval, sometimes two datasets have different intervals, this would require a offset. The example in the textbook as in the monastery, whether production is counted per day or per week. Other examples include recombination event across genome, per 100kb or per 1MB, as well as SNP density.
+```
+
+## 10M2. 
+If a coefficient in a Poisson regression has value 1.7, what does this imply about the change in the outcome?
+```{r}
+# for every unit change in the predictor there will be a 5.47-fold (e^1.7) increase in the number of counts
+# a^n*a^m=a^(n+m)
+# exp(a+1.7(x+1)) = exp(1.7)exp(a+1.7x)
+exp(1.7)
+```
+
+## 10M3. 
+Explain why the logit link is appropriate for a binomial generalized linear model.
+```{r}
+# binomial generalized linear model uses a binomial distribution to model count in a binary option with the parameter being probability of one option in each single trial, logit link would transfer a linear model to a probability scale and constrain the parameter between 0 and 1
+```
+
+## 10M4. 
+Explain why the log link is appropriate for a Poisson generalized linear model.
+```{r}
+#Poisson generalized linear model use Poisson distribution to model count within a fixed interval with low rate, the count has no upper limit. 
+# a log link map linear model to positive reals
+```
+
+# Chapter 11.3 problems
+##10H3 
+The data contained in library(MASS);data(eagles) are records of salmon pirating attempts by Bald Eagles in Washington State. See ?eagles for details. While one eagle feeds, sometimes another will swoop in and try to steal the salmon from it. Call the feeding eagle the “victim” and
+the thief the “pirate.” Use the available data to build a binomial GLM of successful pirating attempts.
+
+```{r load data}
+library(rethinking)
+library(MASS)
+data("eagles")
+d <- eagles
+```
+
+```{r data clean}
+summary(is.na(d))
+d$Aid <- as.numeric(ifelse(d$A=="A",1,0))
+d$Pid <- as.numeric(ifelse(d$P=="L",1,0))
+d$Vid <- as.numeric(ifelse(d$V=="L",1,0))
+```
+### (a)
+Consider the following model:
+yi ∼ Binomial(ni; pi)
+log pi
+1 − pi= α + βPPi + βVVi + βAAi
+α ∼ Normal(0; 10)
+βP ∼ Normal(0; 5)
+βV ∼ Normal(0; 5)
+βA ∼ Normal(0; 5)
+where y is the number of successful attempts, n is the total number of attempts, P is a dummy variable
+indicating whether or not the pirate had large body size, V is a dummy variable indicating whether
+or not the victim had large body size, and finally A is a dummy variable indicating whether or not the
+pirate was an adult. Fit the model above to the eagles data, using both map and map2stan. Is the
+quadratic approximation okay?
+```{r build model use quap}
+m11.3.1 <- quap(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) <- a+bp*Pid+bv*Vid+bA*Aid,
+    # why not use 6 types of treatments like R code 11.7 # why not use index variable
+    a ~ dnorm(0,1.5),  # dnorm(0,10) would pile up probability mass near zero and one
+    bp ~ dnorm(0,5),
+    bv ~ dnorm(0,5),
+    bA ~ dnorm(0,5)
+  ),data=d
+)
+```
+
+```{r sample from prior}
+prior <- extract.prior(m11.3.1,n=1e4)
+p <- inv_logit(prior$a)
+dens(p,adj = 0.5)
+```
+
+```{r}
+plot(precis(m11.3.1,depth = 2)) # quap is alright with a regularized prior
+precis(m11.3.1,depth = 2)
+```
+
+```{r build model use ulam}
+dat <- list(y=d$y,n=d$n,Pid=d$Pid,Vid=d$Vid,Aid=d$Aid)
+m11.3.2 <- ulam(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) <- a+bp*Pid+bv*Vid+bA*Aid, # suppose there is no intercation between Pid, Vid or Aid
+    # why not use 6 types of treatments like R code 11.7 # why not use index variable
+    a ~ dnorm(0,1.5),
+    bp ~ dnorm(0,1.5),
+    bv ~ dnorm(0,1.5),
+    bA ~ dnorm(0,1.5)
+  ),data=dat, chains = 4,cores = 4, log_lik = TRUE
+)
+```
+
+```{r sample from prior of intercept}
+prior <- extract.prior(m11.3.2,n=1e4)
+p <- inv_logit(prior$a)
+dens(p,adj = 0.1)
+```
+
+```{r}
+# how to calculate prior for all of the coefficients ????
+prior <- extract.prior(m11.3.2,n=1e4)
+p <- inv_logit(prior$bp)
+dens(p,adj = 0.1)
+```
+```{r posterior prediction 00}
+k <- LOOPk(m11.3.2)
+dat <- list(dat,c(1:8))
+#plot(dat$)
+```
+
+```{r parameter estimation}
+plot(precis(m11.3.2,depth = 2))
+precis(m11.3.2,depth = 2)
+# parameter estimation by the quap and ulam is very similar
+```
+```{r Pareto diagnostics}
+#? how to deal with this
+(k <- LOOPk(m11.3.2))
+```
+
+```{r outcome scale}
+post <- extract.samples(m11.3.2)
+(inv_logit(post$a))
+```
+
+```{r posterior prediction check}
+success <- by(d$y,list(d$Aid,d$Pid,d$Vid),mean)  # calculate the proportion in each combination of dummy variables
+head(success)
+``` 
+
+## (b)
+Now interpret the estimates. If the quadratic approximation turned out okay, then it’s okay to
+use the map estimates. Otherwise stick to map2stan estimates. Then plot the posterior predictions.
+Compute and display both (1) the predicted probability of success and its 89% interval for each row (i)
+in the data, as well as (2) the predicted success count and its 89% interval What different information
+does each type of posterior prediction provide?
+
+Interpretation: Pirating eagle with large body size on average, has 4.68 more successful attempts, with 95% confidence, pirating eagle has 3.27~6.40 more successful attempts. Adult pirating eagle on average has 1.21 more successful attempts, with 95% confidence,adult pirating eagle has 0.39~2.08 more successful attempts. Victim eagle with large body size has 4.97 times less being pirated than victim eagle with small body size.
+To sum up, body size of eagle is key determing in success of pirating or protecting food. Age of pirating eagle has a less obvious effect.
+not based on the outcome scale
+
+since binomial regression is not guaranteed to produce a multivariate Gaussian posterior distribution, I will stik with the ulam model although their estimates look similar
+# ```{r posterior prediction 01}
+# success_post <- link_ulam(m11.3.2, data = dat)
+# success_mean <- apply(success_post,2,mean)
+# success_ci <- apply(success,2,PI)
+# ```
+
+```{r}
+postcheck(m11.3.2,n=1e4)
+# Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% intervals of the expectation, and 89% interval of simulated samples, respectively.
+# the data are roughly within the model prediction
+#one datapoint not obviously within it, but not correlated with LooPk value  
+```
+
+```{r posterior prediction 02} 
+k <- LOOPk(m11.3.2)
+plot(dat$n,dat$y, xlab="total number of attempts", ylab="total success", col=rangi2, pch = ifelse(dat$Pid==1,1,16),lwd=2,xlim=c(0,30),ylim=c(0,30),cex=1+normalize(k))
+# set up the horizontal axis values to compute predictions at
+ns <- 100
+n_seq <- seq(from=0,to=30, length.out = ns)
+# predictions for pirating with large body size, more mature and victim eagle with small body size
+y_101 <- link_ulam(m11.3.2,data = data.frame(n=n_seq, Pid=1, Vid=0, Aid=1)) 
+# link_ulam vs link
+#, n = data.frame(n=n_seq)) # why 2000 row in y, relationship with n_seq? # cannot use data=data.frame()
+y_mu <- apply(y_101,2,mean)
+y_ci <- apply(y_101,2,PI,prob=0.89)
+#post_2 <- extract.samples(m11.3.2)
+lines(n_seq,y_mu,lty=1,lwd=1.5)
+shade(y_ci,n_seq,xpd=TRUE)
+```
+
+##(c) 
+Now try to improve the model. Consider an interaction between the pirate’s size and age
+(immature or adult). Compare this model to the previous one, using WAIC. Interpret.
+```{r}
+dat <- list(y=d$y,n=d$n,Pid=d$Pid,Vid=d$Vid,Aid=d$Aid)
+dat$Tid <- d$Pid+d$Aid
+m11.3.3 <- ulam(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) <- a+bT*Tid+bA*Aid, # Tid is aggregated Pid and Aid
+    a ~ dnorm(0,1.5),
+    bT ~ dnorm(0,1.5),
+    bA ~ dnorm(0,1.5)
+  ),data=dat, chains = 4,cores = 4, log_lik = TRUE
+)
+```
+
+```{r}
+plot(precis(m11.3.3,depth = 2))
+```
+
+```{r}
+compare(m11.3.2,m11.3.3, func = WAIC)
 ```
 

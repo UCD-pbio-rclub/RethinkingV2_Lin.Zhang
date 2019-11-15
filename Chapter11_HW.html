@@ -382,11 +382,8 @@ summary {
 <pre><code>## [1] 0.9608343</code></pre>
 <pre class="r"><code>exp(3.2)/(1+exp(3.2))</code></pre>
 <pre><code>## [1] 0.9608343</code></pre>
-<p>#10E3. Suppose that a coefficient in a logistic regression has value 1.7. What does this imply about the proportional change in odds of the outcome?</p>
-<pre class="r"><code>#???
-inv_logit(1.7)</code></pre>
-<pre><code>## [1] 0.8455347</code></pre>
-<p>#10M1. As explained in the chapter, binomial data can be organized in aggregated and disaggregated forms, without any impact on inference. But the likelihood of the data does change when the data are converted between the two formats. Can you explain why?</p>
+<p>#10E3. Suppose that a coefficient in a logistic regression has value 1.7. What does this imply about the proportional change in odds of the outcome? log(odds)=a+b*x, b=1.7 e<sup>1.7/e</sup>1=e^0.7, increase the probability of the event by 70%</p>
+<p>#10M1. As explained in the chapter, binomial data can be organized in aggregated and disaggregated forms, without any impact on inference. But the likelihood of the data does change when the data are converted between the two formats. Can you explain why? ?? extra parameter, extra factor</p>
 </div>
 <div id="week6_problem_1-nwo-fund" class="section level1">
 <h1>Week6_Problem_1 NWO fund</h1>
@@ -410,15 +407,15 @@ m1.1 &lt;- quap(
 precis(m1.1,depth = 2)</code></pre>
 <pre><code>##           mean         sd      5.5%     94.5%
 ## a[1] -1.531418 0.06462435 -1.634700 -1.428136
-## a[2] -1.737428 0.08121367 -1.867223 -1.607633</code></pre>
+## a[2] -1.737428 0.08121368 -1.867223 -1.607633</code></pre>
 <pre class="r"><code>#compute contrast on the logit scale relative and outcome scale absolute
 post &lt;- extract.samples(m1.1)
 diff_a &lt;- post$a[,1]-post$a[,2]
 diff_p &lt;- inv_logit(post$a[,1])-inv_logit(post$a[,2])
 precis(list(diff_a=diff_a,diff_p=diff_p))</code></pre>
-<pre><code>##              mean         sd        5.5%     94.5%
-## diff_a 0.20571688 0.10379438 0.040961210 0.3690745
-## diff_p 0.02800787 0.01401572 0.005634545 0.0499346
+<pre><code>##              mean         sd        5.5%      94.5%
+## diff_a 0.20341300 0.10351755 0.037063076 0.36868710
+## diff_p 0.02767297 0.01397465 0.005126048 0.04960957
 ##                                                                                       histogram
 ## diff_a                         &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2587&gt;&lt;U+2587&gt;&lt;U+2583&gt;&lt;U+2581&gt;&lt;U+2581&gt;
 ## diff_p &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2585&gt;&lt;U+2587&gt;&lt;U+2587&gt;&lt;U+2583&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;</code></pre>
@@ -445,27 +442,27 @@ m1.2 &lt;- quap(
 )
 precis(m1.2,depth = 2)</code></pre>
 <pre><code>##                mean        sd       5.5%      94.5%
-## a[1]     -1.1589445 0.4565096 -1.8885350 -0.4293539
-## a[2]     -1.2966118 0.4597878 -2.0314415 -0.5617821
-## delta[1]  0.1648129 0.4908966 -0.6197346  0.9493604
-## delta[2] -0.1872926 0.4856750 -0.9634950  0.5889098
-## delta[3]  0.1410153 0.5114906 -0.6764454  0.9584760
-## delta[4] -0.4092662 0.4709092 -1.1618701  0.3433376
-## delta[5] -0.3797510 0.4792298 -1.1456528  0.3861507
-## delta[6] -0.4452979 0.4895073 -1.2276251  0.3370293
-## delta[7] -0.1743717 0.4742527 -0.9323191  0.5835757
-## delta[8] -0.6358742 0.4640405 -1.3775005  0.1057522
-## delta[9] -0.5145260 0.4687246 -1.2636383  0.2345864</code></pre>
+## a[1]     -1.1578401 0.4565098 -1.8874309 -0.4282494
+## a[2]     -1.2955002 0.4597880 -2.0303302 -0.5606702
+## delta[1]  0.1637017 0.4908967 -0.6208461  0.9482495
+## delta[2] -0.1884150 0.4856753 -0.9646180  0.5877880
+## delta[3]  0.1398275 0.5114927 -0.6776366  0.9572916
+## delta[4] -0.4103747 0.4709093 -1.1629787  0.3422293
+## delta[5] -0.3809051 0.4792306 -1.1468082  0.3849980
+## delta[6] -0.4466022 0.4895118 -1.2289366  0.3357321
+## delta[7] -0.1755191 0.4742532 -0.9334674  0.5824292
+## delta[8] -0.6369930 0.4640407 -1.3786196  0.1046336
+## delta[9] -0.5156652 0.4687250 -1.2647782  0.2334478</code></pre>
 <pre class="r"><code>post &lt;- extract.samples(m1.2)
 diff_a &lt;- post$a[,1]-post$a[,2]
 diff_p &lt;- inv_logit(post$a[,1])-inv_logit(post$a[,2])
 precis(list(diff_a=diff_a,diff_p=diff_p))</code></pre>
-<pre><code>##              mean        sd         5.5%      94.5%
-## diff_a 0.13720938 0.1075952 -0.033233058 0.30837612
-## diff_p 0.02373207 0.0197317 -0.005961658 0.05652221
-##                                                                               histogram
-## diff_a &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2585&gt;&lt;U+2587&gt;&lt;U+2585&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;
-## diff_p         &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2587&gt;&lt;U+2587&gt;&lt;U+2583&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;</code></pre>
+<pre><code>##              mean         sd         5.5%      94.5%
+## diff_a 0.13835626 0.10746815 -0.033225672 0.30895199
+## diff_p 0.02399182 0.01982271 -0.005678494 0.05640977
+##                                                                       histogram
+## diff_a &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2585&gt;&lt;U+2587&gt;&lt;U+2585&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;
+## diff_p &lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2582&gt;&lt;U+2587&gt;&lt;U+2587&gt;&lt;U+2583&gt;&lt;U+2581&gt;&lt;U+2581&gt;&lt;U+2581&gt;</code></pre>
 <pre class="r"><code># condition on  discipline, male is 0.02 higher in probablity space to get awarded</code></pre>
 </div>
 <div id="consider-an-unobserved-confound" class="section level1">
@@ -486,6 +483,555 @@ drawdag(dag1)</code></pre>
 # it does not provide an un-confounded estimate of the direct path from gender to an award, as the backdoor is open through the unobserved confound
 # simulate?
 # but for a regression conditioning on both gender adn discipline to suggest zero influence??</code></pre>
+</div>
+<div id="chapter-11.2-problems" class="section level1">
+<h1>Chapter 11.2 problems</h1>
+<p>##10E4. Why do Poisson regressions sometimes require the use of an offset? Provide an example.</p>
+<pre class="r"><code># Possion regressions reflect count of an event over a fixed interval, sometimes two datasets have different intervals, this would require a offset. The example in the textbook as in the monastery, whether production is counted per day or per week. Other examples include recombination event across genome, per 100kb or per 1MB, as well as SNP density.</code></pre>
+<div id="m2." class="section level2">
+<h2>10M2.</h2>
+<p>If a coefficient in a Poisson regression has value 1.7, what does this imply about the change in the outcome?</p>
+<pre class="r"><code># for every unit change in the predictor there will be a 5.47-fold (e^1.7) increase in the number of counts
+# a^n*a^m=a^(n+m)
+# exp(a+1.7(x+1)) = exp(1.7)exp(a+1.7x)
+exp(1.7)</code></pre>
+<pre><code>## [1] 5.473947</code></pre>
+</div>
+<div id="m3." class="section level2">
+<h2>10M3.</h2>
+<p>Explain why the logit link is appropriate for a binomial generalized linear model.</p>
+<pre class="r"><code># binomial generalized linear model uses a binomial distribution to model count in a binary option with the parameter being probability of one option in each single trial, logit link would transfer a linear model to a probability scale and constrain the parameter between 0 and 1</code></pre>
+</div>
+<div id="m4." class="section level2">
+<h2>10M4.</h2>
+<p>Explain why the log link is appropriate for a Poisson generalized linear model.</p>
+<pre class="r"><code>#Poisson generalized linear model use Poisson distribution to model count within a fixed interval with low rate, the count has no upper limit. 
+# a log link map linear model to positive reals</code></pre>
+</div>
+</div>
+<div id="chapter-11.3-problems" class="section level1">
+<h1>Chapter 11.3 problems</h1>
+<p>##10H3 The data contained in library(MASS);data(eagles) are records of salmon pirating attempts by Bald Eagles in Washington State. See ?eagles for details. While one eagle feeds, sometimes another will swoop in and try to steal the salmon from it. Call the feeding eagle the “victim” and the thief the “pirate.” Use the available data to build a binomial GLM of successful pirating attempts.</p>
+<pre class="r"><code>library(rethinking)
+library(MASS)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;MASS&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     select</code></pre>
+<pre class="r"><code>data(&quot;eagles&quot;)
+d &lt;- eagles</code></pre>
+<pre class="r"><code>summary(is.na(d))</code></pre>
+<pre><code>##      y               n               P               A          
+##  Mode :logical   Mode :logical   Mode :logical   Mode :logical  
+##  FALSE:8         FALSE:8         FALSE:8         FALSE:8        
+##      V          
+##  Mode :logical  
+##  FALSE:8</code></pre>
+<pre class="r"><code>d$Aid &lt;- as.numeric(ifelse(d$A==&quot;A&quot;,1,0))
+d$Pid &lt;- as.numeric(ifelse(d$P==&quot;L&quot;,1,0))
+d$Vid &lt;- as.numeric(ifelse(d$V==&quot;L&quot;,1,0))</code></pre>
+<div id="a" class="section level3">
+<h3>(a)</h3>
+<p>Consider the following model: yi ∼ Binomial(ni; pi) log pi 1 − pi= α + βPPi + βVVi + βAAi α ∼ Normal(0; 10) βP ∼ Normal(0; 5) βV ∼ Normal(0; 5) βA ∼ Normal(0; 5) where y is the number of successful attempts, n is the total number of attempts, P is a dummy variable indicating whether or not the pirate had large body size, V is a dummy variable indicating whether or not the victim had large body size, and finally A is a dummy variable indicating whether or not the pirate was an adult. Fit the model above to the eagles data, using both map and map2stan. Is the quadratic approximation okay?</p>
+<pre class="r"><code>m11.3.1 &lt;- quap(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) &lt;- a+bp*Pid+bv*Vid+bA*Aid,
+    # why not use 6 types of treatments like R code 11.7 # why not use index variable
+    a ~ dnorm(0,1.5),  # dnorm(0,10) would pile up probability mass near zero and one
+    bp ~ dnorm(0,5),
+    bv ~ dnorm(0,5),
+    bA ~ dnorm(0,5)
+  ),data=d
+)</code></pre>
+<pre class="r"><code>prior &lt;- extract.prior(m11.3.1,n=1e4)
+p &lt;- inv_logit(prior$a)
+dens(p,adj = 0.5)</code></pre>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAAAeFBMVEUAAAAAADoAAGYAOjoAOpAAZrY6AAA6ADo6AGY6OgA6OpA6kLY6kNtmAABmADpmZgBmZmZmkJBmtrZmtv+QOgCQZgCQkGaQtpCQ29uQ2/+2ZgC2kDq225C2/7a2//++vr7bkDrb/7bb////tmb/25D//7b//9v///8/tmiRAAAACXBIWXMAAA7DAAAOwwHHb6hkAAATjElEQVR4nO2dC3ujuBVAyWyS3bbx9BG327jdKRNi+///w/LyAxswgnulK3HO9+2sX0gXdKIXArIjgGGy0AEAjIGgYBoEBdMgKJgGQcE0CAqmQVAwDYKCaRAUTIOgYBoEBdMgKJgGQcE0CAqmQVAwDYKCaRAUTIOgYBoEBdMgKJgGQcE0CAqmQVAwDYKCaRAUTIOgYBoEBdMgKJgGQcE0CAqmQVAwzYigeZZl7/WLbz98hQPQZVjQ/OnjuN+8HBEUAjIo6GH7Vv/7/ImgEI5BQfebunk/7p4/ERSC8aAGLdm9ICgEY6QP2mq532QICqEYHcU3jfxhi6AQCuZBwTTugmYAKswWtDtIos4FFeYLevrpmOgAC1ks6OwtACaAoGAaBAXTICiYxlHQ/eYy/mcUD/q41qBDJ5AQFFRwbuIP2xfHLQDm494HLdqT8dO3AJgNgyQwDYKCaRAUTIOgkbKW1Q8IGifZWg45gkZJdv4ndRA0RrLO/5IGQSMku/l/yiBoL/LLsCUTzO5epAuC3nHtkZijkpVe1vsyURC0Q08lJ7JnWc8rgcSSOe7DIOiFgepSoBIVVSobeZceCHpixMOlO5cNvlmaWAoHfhwEbRivJhfunWidJ9gFieGCXASteFhIi3ZPtFd7t/H81KKYrULQ45Tgl+yeoFK9G89NTnTgpgaCTot9SUMqmZhbamNNeCRzAQg6MfTZO9i34fx+X8+GDwd3vbnFMheAoFMjn7mHUgd4ZMOhxMbacJXZXg1WL+j0wOft4oQGdmlyc9pw2Y6xImsX1CXuOfs4uI2k7v3nF8Z+4tRTCMrKBXULe8ZOBhN0tA2fYLQV0hd0LDLXqJ33cmyE7ZrWyEZThvbZ2JezA1InbUHrSZbBuZYZY2nHLcRPTz0eDw3/Lhv7cm5A6qQsaEfAO0fnTfU4bfTgx4JH+XEX89ju8dipTZOF6PCpezpBuR+oXqrS+WegHbZ7+FPBHsPjLmb9xYPdjqEURz51Tyckgw3ZwvURkvNSgn3gh13MhemHIllB9QKSnNl3+1OZNt7z89fni1QF1YxnWtoTI3CpzsfHXJlTvnOyCEGiguoucpyUuIN3QnVyM2UxOdtZeXgnTUG1o5mQvlvbLaW8wI7bKsk0BdUPRnyAPqnD6pjmTO5nP/zk2w+CqmShcgB9HeNLt7idmAt5WUiKgnqJZbzQZoQgPym1gLurlYIpmqCg3kIRPiXzaKPAhzhQ9gi6JKeBrGZGIN5tEAVBhfAaSW9mSmdRQx/iMPknJ6jnQHoqUaUzjeGPcJAIEHRxht11Gmrn+Q0c4RAhpCZokGN4NS2zNKkZ33gkQBCJCRpsMkTqJjKDSdg4wP6jSEtQG1EsYmgXjOya/x6Uw6fu6fjGRhSLkJ25Ese+oIdtz8O4jRxAE0EsRarKUMJ3IK6HI8/emhfF6cWjLbxh/D6CUxGdWlXA9zyeWxCH7VnL/PlzyhbeCB+BED07YmnfbAu635yfxV10GvnghzB4AHLYWu92h99oUqlBQ+cviXFBDZxMHu2DtlWorT6osSJcSDb6NjimBS0b+WYU36k/Ax/ERIZHF7KRdwbwGVAK86DmCnA52cBrI3gMKQFBDRbgcrKeV4bwuOZ2dv65kVG8yQJcjtj6ExViEPT008AP2zFZfhLUx9SmnkePhz32Jt5qAYpgVs+jvwMft6CWSzB1PB37qAVFz6B4OfwxC4qfgfFRAM7n4rMzoUfx+BkcD0XgWoMetjcLQR9uoQV+GkC/EGYsWH5x3EIH/DSBejG490GL7L3nUwRdKdrlEOsgCT+toFwSkQqKn3bQLYs4BcVPS6iWRpSC4qctNMsDQWE5iqc9YxQUP82BoFc54adB1AolOkHR0yZa5RKboPhpFAT1mw+4olQykQmKn2ZBUG+5wCx0CicqQfHTMgiKoLZRKZ6YBMVP26xdUPy0jkYJISiIsW5B8dM+CmWEoCDHmgXFzwhYsaD4GQXyxYSgIMhqBcXPOEBQMM1aBcXPWBAvKQQFSdYpKH5GwyoFxc+IkC4sBAVREBRMs0JB8TMmEBRsI1xcCAqyrE5Q/IwLBAXTrE1Q/IwN2RJDUBAGQcE2okVmXVD8jA8EBdMgKNhGstCMC4qfMYKgYJqggu6y7OWwzbKbJ3YiKJwJKWj+/Fk6+lI9Of5NKyb9ZEGVgIIetqWWxdPHsVFVJybtVEGZgILuN2XLXnz7cTz9qxGTdqqgjWC5UYOCPOEEvfRBa1VVQlJOFPQJKKjXUTyCRkpIQZ3SWQiCRspKBMXPWDEhaK4+ikfQaJErusU1aNYiFM/MKMAWhgSdvUWYNMELqxAUP+MloKD1FFNJpweKoNAhnKB51s7PF5n2RD2CxkswQa/OH2mf6sTPmBErvTmLRRq0F4sgaMyEEtRfDYqfURNK0LIP2lah2n1QBI2aYIKWjXwziu/Un/I+4WfchBPUKZ35IGjcICjYRqoAERRUSFxQ/IwdBAXTICiYBkHBNGkLip/Rg6BgG6EyRFDQAUHBNAgKpklZUPxMAAQF0yAomAZBwTQJC4qfSSBTjAgKSiAomAZBwTQICqZJVlD8TAMEBdMgKJgGQcE2IgWJoKBFooLiZyogKJgGQcE0CAqmQVAwTZqC4mcyICjYRqIsHwi631TPhvcUi2xCEBwPglY3pc+6d6PXi0U2IQiOF0GP0xxFULjDl6CNojfPPlSIRTIdMIAnQYvSzvfjYXvzXA/5WCTTAQP4ELR66kxjZjFahSIo3OFlFP/04S0WyXTAAD4E/d74OV59CsUimQ5YQKA0JwqaIyi4oy3oLjtznmbalap+vWbZTdMvJBZ+JoW/GvRM7eevH50HcwuFIpgM2EBf0Fv2m7Iq3dVnP1Uex42gSRFC0PfTM+O74yYEhXuUBS2ry9PDt8/nkaraM6cGhWksL0/X5Xb7zbcfdRVadEdJmhdBQ7T4F7Q581lyswoPQaEHfUGrUVF+OtupGolcKmAGfUF3z59fry/twF01ErlUwA6LS/Thufj3sk1/7zvVmSuM4hE0NXwIWs3ND5/qPJ1qWhrIcDAQMdqClm37fvP8ud94aeIRNDnUBd1vsqePw/bhlXMICn2oC3rHYduduZcKRCwRsIR3QfPTuqaiex2d3tpUiBl1QW8qzPY8fIX8qU4ETZClhfpwkNRtyq8W2ckvFkHQBFEWtF5edwU1KLihLuh795s8az+Q74PiZ4ooC3o/wXRagHdzdh5BoRftPmiRvff+QjoOmSTAHOpNfNY77Skeh0wSYA7tGtRXHDJJgDkQFEyjLmjZyD9/7h7eIRRBoZ+FxfpwkPT0kVermfTvD4qfaaIraDUxX83Ie7j1DYKmia6g1UR9JaiHm4chaJr4qUF3j66aQ1Dox0sfNH84XY+g0I+yoM1U/eO72CIo9KMtqJ8wRFIAi6QiKH4mivYovmflkkIYCJosqoLumsFR/vhZcwgKAywr2VFBz3ew+3pVH8UjaKroCXq1Wln/3kwImip6gl6dgdc/1YmgqaIp6MAlnOJRSCQARklDUPxMFgQF0yAomEZT0MuT5hAUZqI4D+otCgRNmUVli6CgDYKCaRAUTJOCoPiZMAgKpkFQMA2CgmkQFEyDoGAaBAXbLCldBAV14hcUP5MGQcE0CAqmQVAwDYKCaRAUTIOgYBoEBdssKN+Zgt7drEnhdBYkgz9BBy/0RFAYxmMN2j6FmxoUHPDZxO831e1sERQc8NsH3T19ICi44HmQlGdvCAoO+B7Ff73+gqAwHe/TTIft7ZO9EBSG8T8PKhkCfiZPEEFzsXlQBE2e+UW8uAY9TdvPjgBBV0BAQRdHgKArAEHBNB4FLQfwfbdcRlAYwZ+g56ciFt3HIyIojOBN0MP28myvziNmERRG8Cbo4IM/EBRGiLoGxc/08dkHbatQuT4ogq6A2YU8Yz1oM4rv1J8ICuP4E1Q6AARdBQgKpkFQMA2CgmkQFEwTsaD4uQYQFEyDoGCbucWMoOAFBAXTICiYJlpB8XMdICiYBkHBNAgKpolVUPxcCQgKtplZ0ggKfkBQMA2CgmkQFEyDoGCaOAXFz9WAoGCbeWWNoOAJBAXTICiYBkHBNrMKG0HBFwgKpolQUPxcEwgKpkFQMA2CgmkQFGwzp7gRFLyBoGAaBAXTRCcofq4LBAXTICiYBkHBNF4EzbOseVxnvvxpxwi6LnwImj99HPeblyOCgjszCtxR0OZx3Ift8yeCgjP6gu43zdO4d8+fCAqu+KpBS3YvywXFz7WhL+i5Yd9vMgQFRzwIWo7im0b+sEVQcMSHoHJZI+jqQFAwjVdBGSSBM1I1n0M6WYtzzgi6QgIIOnsL/FwhCAqm8SDoYds06Z0eKILCJPQFzbP2VFJxejE3ZwRdIeqCnk91lqo+fy7KGUFXiLqgp8UiJcXSaSYEXSHOhU4NCj7RFvR8Kn55HxQ/14i6oNUypppO/YmgMA19QaUyRtBVgqBgGgQF0yAo2Ma12BEUvBKNoPi5ThAUTIOgYBoEBdMgKJgGQcE2jgUfSlD8XCsICqZBUDANgoJpEBRME4eg+Lle3MoeQcEzCAqmQVAwDYKCaRAUbONU+GEExc81g6BgGgQF09gXFD9XDYKCbVzKP4Sg+LlyEBRMg6BgGuOC4ufqWWwLgoImCAqmQVCwzXQH/AuKn4CgYJzJFiAohMCuoPgJFVM9QFAIAoKCaawKip/QMNEEBIUwaAl62DaPQuw863hhdrBClATNT8+QnfcwWQSFE9NccBR04eO48RPOqAi637yfXhadRh5BwZVJNnitQfETrpnig3sftK1CZ/RB8RM6aAhaNvLNKL5TfyIozGGCER7nQfETbnnshC9ByzrXOU1In4dazBc0nz6Kx04YJBu3Y3EN2vRIs/8BqLBU0NlbAEwgxI0bACbjebEIgBueF4sAuOF3sQiAI34XiwA4Qg0KpvG5WATAGZ+LRQCcYR4UTIOgYBoEBdMgKJgGQcE0YoICqCAkqDup5MGOBMgjolCD58GOBMgjolCD58GOBMgjolCD58GOBMgjolCD58GOBMgjolCD58GOBMgjolCD58GOBMiDaXcwDYKCaRAUTIOgYBoEBdMgKJhGUdAiy54+et/o5FHfCeVt9OfLM6nY3VylJZ7H12uWvYhncZNJXh6t97Ffz+Xrt/NV6gKlridoUYZWnMLrvNHJ47AtX+QKBXsbe3F7GaF0HkWZ/n6jvCN59UbD0P3mfBsFiVJXE7S5rn73cv9GKY+v1+po5zd3khLO5Fhf7CouaM/BUt6Rw/blqFAidaV5ilyk1NUE7fiiJE9PsvLV9G0m+fM/xQXtHqxfFfpCt5loCVpkb+cb0YiUup6g9WEuro95IS7ofbI78YrnJpPyrXwftJNH8e2PjUZnursjak1851AdF5e6mqBNVdZWaJ03Snk0n8gXbDeTqtmSF7STR161kU0Np5eJ2rD1ykiRUk9L0EJpjHTJpLpPlbagTyrNzc2OVE3N16vKpEccgoZo4hXqz74dUW7im05b04FTy0RrSHk8xtLEBxgk5SqzoJ1M8vYCRGF5Onk0JSo/VOpmotOm1UnHMUjyPs10uR2fZiYV8jVoJ4/mzqzyTXzPpJx8JteJ2p5m8j5Rr9OhOvbErnAmqTuHXqZ/dXtWnUw89EFtT9TXzWEVXDMezXXGjFd5tK2vQi6dHTnqnOrs5FEonbPtZLJTyqQRVKzUWSwCpkFQMA2CgmkQFEyDoGAaBAXTICiYZj2CHrbNBPLQLGZ7pcJ5kc/Iiyt2jyZfuxPVl+f31ZPY79cP9LvbcuCSmTbQ/PYTtUtegrImQZulTgOCtlcqnE9+jLy4pkktHzZ06ExK+Xkl57CgQ2fi2kB35bt2QUnzidolL2FZk6C/1Osv+gVtr1Q4nz4eedGhSW2/Gay55go6tJahDbTJsX5IZfuJ4vqkkKxJ0Je8PsXXJ+jpSoVzKY+86Gx4ErT6btcsc9pv/rFp1jtVrfC/nv5dnfWrF6/vnn9uLp///ppl5Qd/f+1dHDWwGuwU6GU10vVFFkrrk0KyKkFrj1pBq0t7O73HRtDTEsaRF51U2yb+dIFP1dbvN1VbW/63q4V6+qjquartLevBJoL286YGbX98G9LwetprQRu1r4KSv+QlMKsSdHQ9fLdiGnnR2aoZJFXXee6/fzRVXd36li+aam/XbLn72/NnqVnl5PnzRtC3/sXJw1ckXFf1t4KqLNkOyroEHbuiaKagdWqnS02KqrWua8nyn+I06ipf77///tuP8oPqu+vPzz++D2dc0HaQdCOoxiUvgVmXoFVRjgo6s4mvW9ayZ/ntv68X5/LztMDu7evPP79/lH2A6rt8kqAPmvi67v72x/crZVOsP1cnaOnKeB903iDp/P3Xa08NWvYs/vNy3P1l23w3WIN2+6CDl8xc/Y2c5m5P16Ok5+fqBP369U9jNejMaabqf00X4aqJb62qmuLf/vp2zKtZrksfNH9Qgw5fMnMlaN7k3nyidMlLYNYmaNkyjgk6c6K+8rKpPMtK7Oxcc2+E07i+vqVT/d3p82qANCjo8CUzRTMP+nLsfqJ2yUtYVifofjMq6OUM4siLK65OddZft4Pz1sR6vvPj6gKg/dU86Ef1x/JzUNDBS2aaQMu/he4nepe8BGU9gkKUICiYBkHBNAgKpkFQMM3/AWTVECp9JSnXAAAAAElFTkSuQmCC" /><!-- --></p>
+<pre class="r"><code>plot(precis(m11.3.1,depth = 2)) # quap is alright with a regularized prior</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code>precis(m11.3.1,depth = 2)</code></pre>
+<pre><code>##          mean        sd       5.5%     94.5%
+## a   0.4977641 0.6020250 -0.4643880  1.459916
+## bp  4.2646081 0.8948486  2.8344672  5.694749
+## bv -4.5360873 0.9434080 -6.0438355 -3.028339
+## bA  1.1235951 0.5211947  0.2906252  1.956565</code></pre>
+<pre class="r"><code>dat &lt;- list(y=d$y,n=d$n,Pid=d$Pid,Vid=d$Vid,Aid=d$Aid)
+m11.3.2 &lt;- ulam(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) &lt;- a+bp*Pid+bv*Vid+bA*Aid, # suppose there is no intercation between Pid, Vid or Aid
+    # why not use 6 types of treatments like R code 11.7 # why not use index variable
+    a ~ dnorm(0,1.5),
+    bp ~ dnorm(0,1.5),
+    bv ~ dnorm(0,1.5),
+    bA ~ dnorm(0,1.5)
+  ),data=dat, chains = 4,cores = 4, log_lik = TRUE
+)</code></pre>
+<pre class="r"><code>prior &lt;- extract.prior(m11.3.2,n=1e4)</code></pre>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;6b839b7f8a2735720d95d36c1a29387d&#39; NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0.001 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 10 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:     1 / 20000 [  0%]  (Warmup)
+## Chain 1: Iteration:  2000 / 20000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  4000 / 20000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  6000 / 20000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  8000 / 20000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 10000 / 20000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 10001 / 20000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 12000 / 20000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 14000 / 20000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 16000 / 20000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 18000 / 20000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 20000 / 20000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 1.039 seconds (Warm-up)
+## Chain 1:                1.029 seconds (Sampling)
+## Chain 1:                2.068 seconds (Total)
+## Chain 1:</code></pre>
+<pre class="r"><code>p &lt;- inv_logit(prior$a)
+dens(p,adj = 0.1)</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code># how to calculate prior for all of the coefficients ????
+prior &lt;- extract.prior(m11.3.2,n=1e4)</code></pre>
+<pre><code>## recompiling to avoid crashing R session</code></pre>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;6b839b7f8a2735720d95d36c1a29387d&#39; NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 0.001 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 10 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:     1 / 20000 [  0%]  (Warmup)
+## Chain 1: Iteration:  2000 / 20000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  4000 / 20000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  6000 / 20000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  8000 / 20000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 10000 / 20000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 10001 / 20000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 12000 / 20000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 14000 / 20000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 16000 / 20000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 18000 / 20000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 20000 / 20000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 4.131 seconds (Warm-up)
+## Chain 1:                0.669 seconds (Sampling)
+## Chain 1:                4.8 seconds (Total)
+## Chain 1:</code></pre>
+<pre class="r"><code>p &lt;- inv_logit(prior$bp)
+dens(p,adj = 0.1)</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code>k &lt;- LOOPk(m11.3.2)</code></pre>
+<pre><code>## Warning: Some Pareto k diagnostic values are too high. See help(&#39;pareto-k-diagnostic&#39;) for details.</code></pre>
+<pre class="r"><code>dat &lt;- list(dat,c(1:8))
+#plot(dat$)</code></pre>
+<pre class="r"><code>plot(precis(m11.3.2,depth = 2))</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code>precis(m11.3.2,depth = 2)</code></pre>
+<pre><code>##          mean        sd       5.5%     94.5%     n_eff      Rhat
+## a   0.4466586 0.5794977 -0.4620347  1.420428 1046.3607 1.0035765
+## bp  3.2778019 0.5469272  2.4312439  4.184209 1121.6770 1.0000008
+## bv -3.4850357 0.6083546 -4.4896464 -2.544348  992.3684 1.0005964
+## bA  1.0340951 0.4918147  0.2860774  1.836452 1267.9423 0.9995117</code></pre>
+<pre class="r"><code># parameter estimation by the quap and ulam is very similar</code></pre>
+<pre class="r"><code>#? how to deal with this
+(k &lt;- LOOPk(m11.3.2))</code></pre>
+<pre><code>## Warning: Some Pareto k diagnostic values are too high. See help(&#39;pareto-k-diagnostic&#39;) for details.</code></pre>
+<pre><code>## [1] 0.9487216 0.3570850 0.9215727 0.3159564 0.6371484 0.9762458 0.6936566
+## [8] 0.4763020</code></pre>
+<pre class="r"><code>post &lt;- extract.samples(m11.3.2)
+(inv_logit(post$a))</code></pre>
+<pre><code>##    [1] 0.7358789 0.8338192 0.7219511 0.7486850 0.4667765 0.8888800
+##    [7] 0.7339392 0.3171039 0.5435042 0.4928043 0.7128184 0.7336806
+##   [13] 0.6745067 0.5229961 0.2421839 0.4208169 0.7083530 0.8440409
+##   [19] 0.4856620 0.5390768 0.6715782 0.8128773 0.4373691 0.7090136
+##   [25] 0.5391160 0.5149514 0.8616897 0.7208236 0.6550822 0.5180456
+##   [31] 0.5010057 0.4156982 0.5653727 0.4457266 0.4884459 0.7814289
+##   [37] 0.7441629 0.7885452 0.6077712 0.7743116 0.5268980 0.5962941
+##   [43] 0.6235661 0.7148565 0.7912193 0.7671533 0.4642765 0.8028485
+##   [49] 0.6923178 0.3781919 0.6102678 0.6235973 0.4031692 0.5786387
+##   [55] 0.4821941 0.6293467 0.5326160 0.7937934 0.6808831 0.6706438
+##   [61] 0.7428629 0.4599227 0.5957236 0.6508157 0.8863333 0.4811846
+##   [67] 0.5198175 0.5890921 0.5977037 0.8425117 0.5778163 0.7540193
+##   [73] 0.5049677 0.4841826 0.7108616 0.7970804 0.7923568 0.4684020
+##   [79] 0.6104445 0.4112996 0.3706600 0.6021972 0.6419939 0.5884627
+##   [85] 0.6969994 0.6994746 0.7353735 0.8443566 0.8869870 0.7056151
+##   [91] 0.5829134 0.5114616 0.5805220 0.3602392 0.4660581 0.5632841
+##   [97] 0.8501090 0.6798109 0.6291716 0.5269359 0.5390206 0.4368742
+##  [103] 0.4722297 0.6419245 0.5998849 0.4588756 0.7323369 0.5426592
+##  [109] 0.5786138 0.6447957 0.5549011 0.6918858 0.7483050 0.6372728
+##  [115] 0.4621171 0.3088686 0.5486275 0.6672538 0.8444723 0.6396505
+##  [121] 0.5089118 0.8326211 0.8473094 0.3952494 0.6532138 0.6645074
+##  [127] 0.4501959 0.5742531 0.6645375 0.7072109 0.3806244 0.6981924
+##  [133] 0.7836988 0.2577963 0.7357116 0.5441725 0.7992025 0.7443476
+##  [139] 0.5418244 0.2282951 0.7891627 0.7866286 0.6401013 0.6104789
+##  [145] 0.6227932 0.4060988 0.6148997 0.5909455 0.6568838 0.5382997
+##  [151] 0.5508631 0.5052329 0.5291200 0.5527033 0.5995991 0.7259862
+##  [157] 0.6226881 0.8215310 0.7513129 0.6345315 0.4437943 0.7101269
+##  [163] 0.5801220 0.6046164 0.5544476 0.7603717 0.7463065 0.7733868
+##  [169] 0.7535294 0.4455251 0.5755876 0.4812374 0.7335988 0.8239966
+##  [175] 0.4230802 0.6129396 0.6359030 0.4929639 0.5367779 0.7704418
+##  [181] 0.6513677 0.6268265 0.5231959 0.5348109 0.4058845 0.8039104
+##  [187] 0.8063050 0.5680968 0.4892648 0.6221330 0.8257859 0.7742761
+##  [193] 0.4771475 0.7189239 0.8137295 0.4733340 0.4773380 0.8379217
+##  [199] 0.8973349 0.5672043 0.3809097 0.4748937 0.4858756 0.7051781
+##  [205] 0.7652644 0.6019146 0.3686881 0.8111179 0.8051379 0.4254297
+##  [211] 0.3917765 0.8853321 0.4265215 0.7162572 0.6545071 0.4565364
+##  [217] 0.7832815 0.6759370 0.5560020 0.5065790 0.2745363 0.5317678
+##  [223] 0.7925665 0.6058693 0.6282510 0.3713601 0.8517980 0.5996596
+##  [229] 0.7197671 0.6202702 0.6114360 0.4251425 0.5831769 0.8827855
+##  [235] 0.5091820 0.5958290 0.5431199 0.4678560 0.6677372 0.6631505
+##  [241] 0.8732090 0.5958901 0.6880292 0.5668196 0.4648710 0.4448617
+##  [247] 0.4632475 0.6229213 0.4096557 0.6629402 0.6690661 0.4959406
+##  [253] 0.6609109 0.2661856 0.4219359 0.3289109 0.5668544 0.6494976
+##  [259] 0.5309520 0.5548621 0.7489763 0.6825872 0.5381267 0.4049366
+##  [265] 0.8598614 0.6242338 0.4703472 0.6285649 0.3768869 0.3951143
+##  [271] 0.5773106 0.6338813 0.3895206 0.5266131 0.7131552 0.5993548
+##  [277] 0.5829422 0.5670523 0.7558558 0.7236655 0.3612692 0.6008087
+##  [283] 0.6183890 0.7164534 0.6483037 0.6836199 0.6252877 0.8071360
+##  [289] 0.4254945 0.6782407 0.4284281 0.4925758 0.4615200 0.5491069
+##  [295] 0.4612999 0.5824073 0.7003850 0.6779287 0.7310352 0.6333969
+##  [301] 0.4568452 0.6785179 0.6599098 0.8249345 0.5766090 0.5552000
+##  [307] 0.7216709 0.7870139 0.3207005 0.6028679 0.4359048 0.5054102
+##  [313] 0.6059519 0.6766791 0.7042468 0.5951426 0.7409812 0.8308719
+##  [319] 0.7261969 0.6336644 0.8811721 0.6016074 0.6636675 0.5551167
+##  [325] 0.6270917 0.7584770 0.4085665 0.5078358 0.4318437 0.6091895
+##  [331] 0.3452397 0.5481513 0.4670535 0.5382172 0.6745456 0.7035082
+##  [337] 0.5571237 0.4537465 0.8116610 0.5272797 0.8147367 0.4761229
+##  [343] 0.5296721 0.4509669 0.4806749 0.6002848 0.7117440 0.6467251
+##  [349] 0.7106168 0.6503234 0.8219766 0.7875132 0.6768712 0.6762468
+##  [355] 0.8359864 0.4929041 0.6266208 0.4196305 0.7107070 0.8532799
+##  [361] 0.7040208 0.7169301 0.5097888 0.7508045 0.6478976 0.5212666
+##  [367] 0.5786682 0.3912661 0.7147027 0.5102998 0.7201540 0.6831835
+##  [373] 0.5907125 0.6171052 0.6910007 0.6063602 0.7033827 0.5269017
+##  [379] 0.6413882 0.6491832 0.5406042 0.3596235 0.7457025 0.6195782
+##  [385] 0.8174638 0.4257293 0.5071472 0.5002680 0.6279549 0.5962960
+##  [391] 0.4619716 0.7072018 0.5966248 0.6827390 0.6037613 0.6369559
+##  [397] 0.5600566 0.5944657 0.5713077 0.5801305 0.6538190 0.8123826
+##  [403] 0.5414770 0.9070850 0.6244134 0.5004886 0.4081058 0.7435578
+##  [409] 0.7704037 0.7049028 0.7087542 0.7308792 0.5705653 0.4787246
+##  [415] 0.6368762 0.6626705 0.6887315 0.6058950 0.7460892 0.5972477
+##  [421] 0.8163146 0.6057133 0.7433392 0.5368287 0.6096445 0.8349642
+##  [427] 0.5805286 0.6348693 0.3932134 0.6847556 0.4994151 0.4544649
+##  [433] 0.5605323 0.6208612 0.4675125 0.8391334 0.5108026 0.7055875
+##  [439] 0.6296443 0.6845290 0.7202611 0.6284275 0.8625580 0.6122114
+##  [445] 0.8863237 0.8657707 0.6674894 0.7148054 0.6068805 0.8147408
+##  [451] 0.6695822 0.4565945 0.7351193 0.5369229 0.7177412 0.6605709
+##  [457] 0.6577499 0.3689690 0.5834738 0.5053515 0.4666130 0.5290827
+##  [463] 0.8035347 0.7167647 0.7372480 0.6509740 0.5680693 0.3860178
+##  [469] 0.7473442 0.6221622 0.5171192 0.6506912 0.3495148 0.8511468
+##  [475] 0.5559062 0.5260791 0.5123053 0.5781528 0.5023203 0.6786428
+##  [481] 0.4393942 0.4184266 0.8624572 0.7384633 0.4679804 0.4929989
+##  [487] 0.7271068 0.4131839 0.6152046 0.3692614 0.7468686 0.8144402
+##  [493] 0.3499094 0.3710427 0.5511394 0.9044015 0.6692591 0.5639628
+##  [499] 0.5386279 0.6810481 0.5898592 0.4636389 0.7416437 0.8224888
+##  [505] 0.4359561 0.6062246 0.6429587 0.5329210 0.7261220 0.6644761
+##  [511] 0.5703996 0.7311037 0.5912672 0.4357109 0.6395613 0.7736838
+##  [517] 0.7031659 0.7087280 0.6609117 0.6902206 0.6277112 0.6051853
+##  [523] 0.6936434 0.4545108 0.7345221 0.5323628 0.6133287 0.6119319
+##  [529] 0.6103848 0.7368241 0.5187649 0.5462628 0.8239492 0.4143510
+##  [535] 0.7308199 0.5021927 0.4393064 0.5064353 0.7021193 0.6590226
+##  [541] 0.5411120 0.6072000 0.5256312 0.7145274 0.4898614 0.6423289
+##  [547] 0.4961154 0.4028862 0.6991215 0.6015843 0.4898297 0.5238673
+##  [553] 0.5334740 0.6027492 0.5731862 0.7811034 0.4115449 0.6566041
+##  [559] 0.5133481 0.5524427 0.6998912 0.5182225 0.5437227 0.6823136
+##  [565] 0.7539716 0.7186778 0.5193382 0.5302540 0.6837019 0.7034947
+##  [571] 0.7550230 0.6495201 0.7130839 0.4620601 0.6103639 0.4722831
+##  [577] 0.5840080 0.7719000 0.5438510 0.5363630 0.5753248 0.6342027
+##  [583] 0.7280626 0.7028078 0.6170772 0.6062983 0.5767666 0.5969009
+##  [589] 0.5035430 0.4331233 0.5378520 0.6304196 0.6728161 0.4613903
+##  [595] 0.4775812 0.5490294 0.5542238 0.7256751 0.6581048 0.6620701
+##  [601] 0.5825965 0.8122958 0.4857941 0.5315793 0.7042617 0.3167375
+##  [607] 0.4807139 0.7083062 0.6402633 0.3891215 0.6766402 0.4201861
+##  [613] 0.5718300 0.4826499 0.8623595 0.3700189 0.7047898 0.6776123
+##  [619] 0.5816578 0.7199450 0.5183494 0.8630110 0.3797524 0.5795476
+##  [625] 0.6983955 0.6889174 0.7376860 0.5605216 0.4367333 0.3622362
+##  [631] 0.6032265 0.6494170 0.3260600 0.4029045 0.8490730 0.7474869
+##  [637] 0.4468974 0.6291946 0.6785455 0.7925052 0.3976954 0.6228162
+##  [643] 0.6974095 0.6561385 0.6881049 0.5433243 0.3032771 0.6592702
+##  [649] 0.6844283 0.4062562 0.6255163 0.6175159 0.7221600 0.6642093
+##  [655] 0.7370010 0.6256175 0.6901736 0.5041362 0.4796184 0.5785199
+##  [661] 0.3074661 0.5790908 0.6773789 0.6666163 0.6636256 0.6294262
+##  [667] 0.6081812 0.5805790 0.5579958 0.4789670 0.7800278 0.7363320
+##  [673] 0.7026392 0.7163651 0.5564166 0.4490269 0.4243274 0.6728161
+##  [679] 0.5750678 0.6828215 0.6077651 0.7057876 0.5212227 0.6861489
+##  [685] 0.7017048 0.5766436 0.4228353 0.3839524 0.6070215 0.8575126
+##  [691] 0.7874456 0.5410637 0.8778060 0.4835745 0.8726982 0.6349325
+##  [697] 0.4689102 0.5441659 0.6064611 0.6352444 0.7912064 0.6778296
+##  [703] 0.6648812 0.5961243 0.8228404 0.5948047 0.7530000 0.8487092
+##  [709] 0.7467517 0.7315532 0.8598782 0.3890975 0.7492384 0.5371164
+##  [715] 0.7957734 0.4147739 0.6409591 0.4676180 0.5901165 0.6868785
+##  [721] 0.4802588 0.6587627 0.7830725 0.6791419 0.6783292 0.5457920
+##  [727] 0.7552007 0.4928355 0.5266717 0.7226356 0.8003659 0.5980964
+##  [733] 0.7321110 0.6699064 0.5383879 0.3826796 0.4309029 0.3536385
+##  [739] 0.4435110 0.6505473 0.6635109 0.4971471 0.4597879 0.7647044
+##  [745] 0.6066485 0.7431052 0.5721039 0.5246970 0.5868817 0.6442515
+##  [751] 0.7037476 0.2228667 0.5286582 0.6515176 0.5577261 0.7386441
+##  [757] 0.3410997 0.6042602 0.8218954 0.7034296 0.6373367 0.5871858
+##  [763] 0.5375217 0.7531079 0.3666818 0.8176195 0.7789437 0.7577571
+##  [769] 0.4006270 0.6381764 0.5900664 0.8729852 0.5230413 0.5648801
+##  [775] 0.6541796 0.5513979 0.7183541 0.4936844 0.7213223 0.7230273
+##  [781] 0.4051406 0.7428466 0.5822864 0.6509348 0.6073216 0.7458714
+##  [787] 0.7014168 0.7470628 0.4795119 0.7616480 0.5380973 0.5904018
+##  [793] 0.6723516 0.6601437 0.5934545 0.7867528 0.5041441 0.6861283
+##  [799] 0.6357455 0.2793408 0.4833849 0.7793696 0.8391663 0.6053410
+##  [805] 0.6694984 0.6980315 0.4078218 0.7533749 0.5143206 0.5359052
+##  [811] 0.7135791 0.5443791 0.2606675 0.3674258 0.6758171 0.4476079
+##  [817] 0.7455081 0.5003696 0.5885999 0.6832133 0.6505469 0.5520762
+##  [823] 0.5470135 0.7727150 0.3885433 0.4480814 0.6117913 0.4635837
+##  [829] 0.6243561 0.6600467 0.8521053 0.4493553 0.7368900 0.6932724
+##  [835] 0.3730006 0.5885205 0.4144130 0.4784713 0.6475604 0.7589931
+##  [841] 0.6329284 0.7071620 0.4070443 0.8544539 0.7047112 0.6837932
+##  [847] 0.2865703 0.5528883 0.3766148 0.4351604 0.7578829 0.5390118
+##  [853] 0.6591014 0.6388075 0.3916956 0.6436199 0.5427958 0.6540203
+##  [859] 0.6010263 0.7100783 0.7775383 0.6809425 0.7233137 0.6434851
+##  [865] 0.6897823 0.5138798 0.7099909 0.5204422 0.6545210 0.6812145
+##  [871] 0.6196050 0.4766216 0.8342681 0.5701127 0.6874245 0.6566041
+##  [877] 0.4142020 0.8203173 0.4834625 0.5932004 0.5903768 0.6935714
+##  [883] 0.6227007 0.6669930 0.4493937 0.6322539 0.7001065 0.7740998
+##  [889] 0.5462962 0.4726214 0.5032520 0.5744868 0.6747855 0.6383108
+##  [895] 0.4595790 0.5843141 0.6461756 0.6354781 0.3390007 0.6159195
+##  [901] 0.6430783 0.4596883 0.4222582 0.5510758 0.4862640 0.6504108
+##  [907] 0.7739147 0.5814412 0.6049022 0.6754387 0.7403501 0.5790689
+##  [913] 0.6645696 0.4523929 0.7137477 0.6448818 0.3815520 0.7198193
+##  [919] 0.5630275 0.6775128 0.8043053 0.3543070 0.5857166 0.6484870
+##  [925] 0.4366415 0.5895015 0.3580313 0.8845310 0.6766462 0.4092568
+##  [931] 0.8505425 0.6070297 0.6648767 0.6508851 0.5865024 0.5495239
+##  [937] 0.5303188 0.5975240 0.6205426 0.4808480 0.5160075 0.4482340
+##  [943] 0.7152177 0.4180130 0.2676099 0.6874754 0.5296268 0.6534155
+##  [949] 0.4859319 0.7684955 0.6019703 0.4412980 0.4457493 0.6375545
+##  [955] 0.6505139 0.7839300 0.4670009 0.5646034 0.3966864 0.7060874
+##  [961] 0.6631172 0.3865315 0.4737643 0.4016621 0.6582497 0.7277238
+##  [967] 0.7758197 0.6668647 0.6288895 0.5186274 0.6652781 0.6493033
+##  [973] 0.6274572 0.6038909 0.3793631 0.6803296 0.7179431 0.6055491
+##  [979] 0.4917278 0.5353972 0.7112668 0.5312371 0.6207128 0.5587757
+##  [985] 0.7849804 0.6333428 0.6232888 0.6100608 0.6817517 0.6478437
+##  [991] 0.7680065 0.4983819 0.7783067 0.6221107 0.3398423 0.3999350
+##  [997] 0.6322984 0.4720680 0.4955522 0.6043301 0.5980590 0.4530149
+## [1003] 0.4565043 0.7359169 0.4990197 0.5870415 0.4732103 0.6729585
+## [1009] 0.6195314 0.6423416 0.7219978 0.5808771 0.6638122 0.5177506
+## [1015] 0.6234689 0.6557393 0.3959595 0.6725441 0.6996774 0.6940557
+## [1021] 0.4058237 0.4415029 0.4474354 0.6748624 0.6939066 0.5091670
+## [1027] 0.5526392 0.4324689 0.5301827 0.7054071 0.6656103 0.5004500
+## [1033] 0.5041065 0.6597999 0.6916277 0.6445847 0.7693578 0.6958734
+## [1039] 0.7399350 0.6435615 0.8638381 0.5476866 0.6797442 0.4948440
+## [1045] 0.5967877 0.8216162 0.5225222 0.4685180 0.5889795 0.7248484
+## [1051] 0.5022324 0.6718233 0.7983786 0.5550756 0.4669045 0.3798817
+## [1057] 0.4553115 0.4231659 0.6327223 0.6847921 0.7642200 0.6351455
+## [1063] 0.4509177 0.6364095 0.6037958 0.6994059 0.6066035 0.4222591
+## [1069] 0.6277954 0.5546351 0.8127292 0.7350822 0.5904219 0.5491839
+## [1075] 0.4923379 0.5145219 0.6699389 0.6783184 0.6215598 0.6594647
+## [1081] 0.6134097 0.4351054 0.4649153 0.6083007 0.5804996 0.5495015
+## [1087] 0.7592358 0.6456332 0.6219582 0.7121252 0.3913138 0.3412879
+## [1093] 0.6400892 0.5782476 0.7069205 0.5012390 0.6772069 0.5913595
+## [1099] 0.5197341 0.6871938 0.7417782 0.4216443 0.4896204 0.4727822
+## [1105] 0.7311084 0.6673172 0.6480803 0.5060205 0.4862482 0.5454846
+## [1111] 0.4738542 0.6261682 0.5973802 0.6213916 0.4360141 0.7939625
+## [1117] 0.6050220 0.5808078 0.8339113 0.5846808 0.5502916 0.4575797
+## [1123] 0.7839637 0.4317278 0.6855028 0.7323190 0.5758071 0.5157320
+## [1129] 0.6311171 0.5675104 0.5176266 0.5339371 0.3435647 0.6111778
+## [1135] 0.6525693 0.7216721 0.4824032 0.6488932 0.5755404 0.5793943
+## [1141] 0.6884749 0.7610881 0.6187123 0.6623117 0.4911526 0.4946698
+## [1147] 0.8920952 0.5459967 0.5982969 0.6137040 0.6135256 0.6052876
+## [1153] 0.4639622 0.6517436 0.5779080 0.5549327 0.5350162 0.6279093
+## [1159] 0.8132353 0.5965975 0.6076702 0.7522549 0.3787379 0.3800624
+## [1165] 0.7138345 0.4300107 0.6540696 0.7367750 0.6412824 0.6821945
+## [1171] 0.7262325 0.5306998 0.7371624 0.7663824 0.6322605 0.4717611
+## [1177] 0.7023716 0.4499556 0.7177878 0.6551219 0.6943553 0.5652842
+## [1183] 0.7265851 0.6173450 0.5610042 0.6014520 0.6509846 0.6014836
+## [1189] 0.7455902 0.4539323 0.4221336 0.3413866 0.3015437 0.6217585
+## [1195] 0.6420473 0.5901970 0.6253853 0.3831401 0.3337801 0.5465774
+## [1201] 0.4404156 0.7477813 0.7813409 0.8327701 0.3597438 0.6932325
+## [1207] 0.7025297 0.7126832 0.6870469 0.4510176 0.4575359 0.5430020
+## [1213] 0.7124214 0.4686577 0.5654853 0.5833289 0.6759895 0.4782818
+## [1219] 0.6242396 0.7727500 0.6720086 0.6155702 0.5189627 0.3198014
+## [1225] 0.7816570 0.6006615 0.3606902 0.6425971 0.4670086 0.5736661
+## [1231] 0.5908178 0.4381454 0.2067508 0.6439623 0.5099396 0.5204909
+## [1237] 0.4267659 0.5111012 0.7267012 0.7469409 0.4033285 0.6778154
+## [1243] 0.6305373 0.5435261 0.5025599 0.3283701 0.5273272 0.4236413
+## [1249] 0.4859744 0.5219406 0.6954454 0.6667013 0.4858610 0.3640240
+## [1255] 0.7428306 0.4547513 0.6430366 0.6172999 0.5592954 0.4455110
+## [1261] 0.4489913 0.7186411 0.8696075 0.6219891 0.4230999 0.5616400
+## [1267] 0.7025870 0.6806565 0.6739162 0.7292314 0.6465115 0.7218940
+## [1273] 0.4921576 0.6250152 0.6881836 0.6303016 0.7273155 0.5231091
+## [1279] 0.4773151 0.8423635 0.7465766 0.6194267 0.5998623 0.6073094
+## [1285] 0.7844170 0.7059658 0.7476807 0.8132465 0.4070283 0.5834935
+## [1291] 0.5707963 0.6139756 0.5614514 0.6212256 0.6959769 0.5590396
+## [1297] 0.7305416 0.5511252 0.6539231 0.7581477 0.6301275 0.4412661
+## [1303] 0.6333999 0.6079281 0.5766490 0.5575031 0.5623628 0.6220986
+## [1309] 0.6441740 0.6001581 0.5910114 0.7157502 0.5976046 0.4810367
+## [1315] 0.6477824 0.4012107 0.5674223 0.5957359 0.5710937 0.6886217
+## [1321] 0.3578158 0.5991406 0.6602786 0.5335339 0.7134847 0.6143006
+## [1327] 0.5177153 0.5453209 0.5022785 0.6406898 0.8023623 0.6725462
+## [1333] 0.6860252 0.6207588 0.5178125 0.6126992 0.6751114 0.5607843
+## [1339] 0.4480854 0.4552193 0.6194922 0.4856913 0.8622593 0.5778907
+## [1345] 0.5411450 0.5835839 0.6006175 0.5750849 0.7549732 0.7858370
+## [1351] 0.8205111 0.6977198 0.5530131 0.4683786 0.8379596 0.5929718
+## [1357] 0.4562990 0.5390094 0.7051246 0.6091799 0.5215866 0.6979620
+## [1363] 0.5946686 0.7666698 0.4276808 0.6295647 0.5843448 0.5105949
+## [1369] 0.6172368 0.5173700 0.6927526 0.6314263 0.4015468 0.5498020
+## [1375] 0.6827321 0.5700974 0.5434452 0.6412575 0.5725209 0.4917459
+## [1381] 0.6515751 0.4923327 0.6604050 0.4964822 0.8320859 0.6352351
+## [1387] 0.8637581 0.5939667 0.3853863 0.5546514 0.6196421 0.6817460
+## [1393] 0.5413111 0.6763211 0.5519692 0.5161157 0.7382372 0.7356910
+## [1399] 0.6122765 0.6838673 0.6715316 0.5384540 0.5861308 0.3511750
+## [1405] 0.5870737 0.7760132 0.4882166 0.4059900 0.6995868 0.6145079
+## [1411] 0.6558780 0.5220396 0.3858928 0.4985900 0.8145168 0.6487111
+## [1417] 0.5500266 0.6242802 0.3664441 0.6943414 0.5281056 0.6341232
+## [1423] 0.4755536 0.2918845 0.6070831 0.5379989 0.4879117 0.7085849
+## [1429] 0.7066170 0.6727727 0.5470152 0.4281190 0.6765871 0.5948711
+## [1435] 0.4947782 0.5108780 0.6217244 0.6558956 0.6395164 0.4041150
+## [1441] 0.6172005 0.6309855 0.6781603 0.6498164 0.6498662 0.5342374
+## [1447] 0.8334009 0.5482406 0.4184622 0.4782710 0.5924923 0.3666636
+## [1453] 0.5185552 0.7025462 0.5469146 0.7506817 0.6386509 0.4737993
+## [1459] 0.6216336 0.7657359 0.5148795 0.5912116 0.3577605 0.6621271
+## [1465] 0.5108786 0.5399123 0.6057896 0.6251537 0.5814115 0.3979825
+## [1471] 0.6930886 0.6495054 0.6615555 0.5114044 0.5818334 0.7553548
+## [1477] 0.5261143 0.6506167 0.4294298 0.5194009 0.7064284 0.5524105
+## [1483] 0.2940355 0.6885109 0.6414437 0.6592793 0.5003121 0.5467761
+## [1489] 0.7075722 0.5605617 0.6613504 0.4588145 0.5686287 0.7056215
+## [1495] 0.4697281 0.5613892 0.6393580 0.4785096 0.5548174 0.5042001
+## [1501] 0.7560744 0.6352966 0.6133812 0.6083550 0.6079013 0.5886871
+## [1507] 0.4458174 0.5234843 0.6875981 0.6584015 0.3753604 0.8053531
+## [1513] 0.5879356 0.5083067 0.5862402 0.6574043 0.5010623 0.3604202
+## [1519] 0.5515211 0.6717610 0.7437276 0.9135875 0.4929428 0.6300771
+## [1525] 0.7538331 0.6343432 0.4597125 0.5714498 0.6678087 0.4972028
+## [1531] 0.6586841 0.3789937 0.6773586 0.6347076 0.7585806 0.4908882
+## [1537] 0.8176534 0.2934060 0.5816764 0.4534487 0.5789749 0.6070353
+## [1543] 0.2988630 0.3149450 0.5910337 0.5592677 0.4654059 0.6596652
+## [1549] 0.5921051 0.7885903 0.7758105 0.7743574 0.7543404 0.6336438
+## [1555] 0.6098233 0.4326127 0.5484672 0.6018790 0.5271422 0.6221951
+## [1561] 0.6985646 0.4906306 0.6725355 0.7929728 0.6216507 0.8236594
+## [1567] 0.4177558 0.7870871 0.4900681 0.6425393 0.5605737 0.5830748
+## [1573] 0.4777414 0.4725772 0.6290518 0.5444593 0.5451249 0.8574207
+## [1579] 0.8301605 0.5490004 0.3579961 0.7888308 0.4147355 0.4290755
+## [1585] 0.7655234 0.4533235 0.7483037 0.3780387 0.7257665 0.4915133
+## [1591] 0.4801019 0.6314469 0.5730159 0.8598668 0.3194313 0.5025603
+## [1597] 0.4152642 0.7426228 0.5631619 0.7430246 0.5364178 0.6293685
+## [1603] 0.4700136 0.3630631 0.5932067 0.7343002 0.5773343 0.5652171
+## [1609] 0.5548742 0.3636828 0.3855813 0.5857858 0.6575529 0.7800377
+## [1615] 0.3101224 0.5317736 0.6206513 0.7516112 0.6632227 0.6589504
+## [1621] 0.8852141 0.4989652 0.5147554 0.5505282 0.3831382 0.6691664
+## [1627] 0.7318666 0.6621113 0.6731026 0.5163423 0.7348982 0.7512757
+## [1633] 0.7576573 0.7675011 0.7268366 0.6127616 0.6759940 0.5653107
+## [1639] 0.7420557 0.6329351 0.6650380 0.5512594 0.5945752 0.5142566
+## [1645] 0.4226498 0.5811543 0.5869127 0.4980456 0.6065982 0.7296914
+## [1651] 0.6028906 0.5621804 0.6024445 0.3373987 0.7342938 0.5853028
+## [1657] 0.7208282 0.4149611 0.6549407 0.7332850 0.6452272 0.5885985
+## [1663] 0.6917842 0.6194797 0.4739138 0.5936554 0.6080714 0.7723845
+## [1669] 0.6148497 0.6256227 0.7467509 0.5897444 0.5891421 0.5815830
+## [1675] 0.6932105 0.6675158 0.5447753 0.5244177 0.7574453 0.6696035
+## [1681] 0.7887314 0.7690000 0.7620420 0.4798145 0.4974768 0.6145404
+## [1687] 0.7436497 0.3221573 0.5821052 0.4805725 0.4964067 0.3752523
+## [1693] 0.6741893 0.3621954 0.7672704 0.4317328 0.8429407 0.4732612
+## [1699] 0.5083140 0.9008852 0.7097333 0.4959862 0.6189764 0.6293333
+## [1705] 0.7280792 0.5168267 0.5868957 0.5588252 0.5940863 0.5824305
+## [1711] 0.6213509 0.7270200 0.6589937 0.6018532 0.7267368 0.7308228
+## [1717] 0.8159741 0.4510726 0.4976855 0.5286446 0.4193341 0.5800496
+## [1723] 0.6082996 0.5626434 0.7782616 0.4814488 0.4406782 0.5497186
+## [1729] 0.5859219 0.6895549 0.5180334 0.6658491 0.5634560 0.6253040
+## [1735] 0.7619533 0.5465937 0.5854774 0.6041970 0.7828565 0.5763054
+## [1741] 0.4593401 0.6835639 0.5786745 0.6928162 0.6356863 0.6935187
+## [1747] 0.8135871 0.5196358 0.5617719 0.5913803 0.5458797 0.7520711
+## [1753] 0.5926817 0.6513291 0.7039030 0.4901841 0.7140413 0.6047513
+## [1759] 0.7321786 0.6310157 0.4006878 0.7583388 0.6900261 0.6723575
+## [1765] 0.3481208 0.5567753 0.7078845 0.5448440 0.7341251 0.7561414
+## [1771] 0.6557616 0.4849131 0.7249116 0.5228700 0.6809185 0.5133453
+## [1777] 0.6030854 0.6255231 0.6394915 0.6630859 0.4527175 0.5295565
+## [1783] 0.6215371 0.4997199 0.7193634 0.5643016 0.6431503 0.5929511
+## [1789] 0.8689609 0.6164811 0.5560043 0.5609232 0.6557517 0.3715833
+## [1795] 0.5523867 0.6272101 0.4461865 0.5515750 0.3286459 0.5934242
+## [1801] 0.5419254 0.5440265 0.6861782 0.6840368 0.6162018 0.7047922
+## [1807] 0.4641481 0.4454617 0.6668905 0.6900978 0.9026438 0.5106397
+## [1813] 0.6039317 0.4569844 0.5472937 0.6819781 0.7883246 0.6750410
+## [1819] 0.3238340 0.3910998 0.7401020 0.5594847 0.4932708 0.8978510
+## [1825] 0.6077197 0.5804916 0.4165104 0.6242653 0.5958798 0.8326838
+## [1831] 0.6447500 0.5621121 0.6347343 0.7153383 0.5808822 0.6115317
+## [1837] 0.6633645 0.7351449 0.7146254 0.5115253 0.1153101 0.6166796
+## [1843] 0.7849520 0.5687458 0.5532223 0.6500124 0.5978086 0.8347156
+## [1849] 0.5911191 0.5694244 0.6248337 0.6305762 0.8122469 0.6795098
+## [1855] 0.4136620 0.4003856 0.6664248 0.6630574 0.8300632 0.7064867
+## [1861] 0.4824655 0.8724431 0.6963485 0.5512686 0.6982156 0.4953950
+## [1867] 0.4581656 0.5660608 0.6874482 0.5899953 0.6063769 0.6276933
+## [1873] 0.6451971 0.5613130 0.6349581 0.6512065 0.5261641 0.5147765
+## [1879] 0.5284628 0.6747419 0.5847750 0.6631694 0.4789914 0.5552431
+## [1885] 0.8749767 0.9152507 0.4405892 0.6538515 0.4830238 0.5897810
+## [1891] 0.5885330 0.4537101 0.5918690 0.6257135 0.7361895 0.5706114
+## [1897] 0.4717112 0.6973657 0.6234348 0.5109334 0.5121866 0.6792413
+## [1903] 0.5726293 0.5500618 0.5020270 0.5551959 0.6080607 0.4004550
+## [1909] 0.5874407 0.5794590 0.5580974 0.7279799 0.6149897 0.5597922
+## [1915] 0.4657273 0.3740148 0.5965691 0.4032915 0.6287944 0.6780170
+## [1921] 0.4755093 0.7612677 0.6245398 0.8505290 0.5009305 0.7154864
+## [1927] 0.5550614 0.2565369 0.6045930 0.5187390 0.7196561 0.6794267
+## [1933] 0.7079419 0.3200619 0.6045649 0.5622235 0.7362102 0.5456422
+## [1939] 0.3753676 0.6718852 0.6317660 0.5852702 0.6125061 0.5344304
+## [1945] 0.4033303 0.4856235 0.5925746 0.6459492 0.6345517 0.5510689
+## [1951] 0.6668759 0.2649898 0.5226232 0.7539666 0.4551903 0.7373281
+## [1957] 0.5312529 0.3457021 0.6918217 0.7929735 0.6134020 0.7165637
+## [1963] 0.7333315 0.7462187 0.6276197 0.6391964 0.7483560 0.6375010
+## [1969] 0.6531142 0.6231846 0.4985143 0.7456146 0.6518605 0.5513185
+## [1975] 0.2738418 0.7385750 0.4713042 0.5597908 0.5358406 0.4831503
+## [1981] 0.3437249 0.4417466 0.5762727 0.5872343 0.6371833 0.5822573
+## [1987] 0.7732647 0.7392585 0.6816548 0.7322070 0.4607420 0.2947992
+## [1993] 0.3983702 0.6234838 0.6892425 0.3468787 0.3177194 0.5000298
+## [1999] 0.4110090 0.6226111</code></pre>
+<pre class="r"><code>success &lt;- by(d$y,list(d$Aid,d$Pid,d$Vid),mean)  # calculate the proportion in each combination of dummy variables
+head(success)</code></pre>
+<pre><code>## [1]  1 15 20 29  0  1</code></pre>
+</div>
+<div id="b" class="section level2">
+<h2>(b)</h2>
+<p>Now interpret the estimates. If the quadratic approximation turned out okay, then it’s okay to use the map estimates. Otherwise stick to map2stan estimates. Then plot the posterior predictions. Compute and display both (1) the predicted probability of success and its 89% interval for each row (i) in the data, as well as (2) the predicted success count and its 89% interval What different information does each type of posterior prediction provide?</p>
+<p>Interpretation: Pirating eagle with large body size on average, has 4.68 more successful attempts, with 95% confidence, pirating eagle has 3.27~6.40 more successful attempts. Adult pirating eagle on average has 1.21 more successful attempts, with 95% confidence,adult pirating eagle has 0.39~2.08 more successful attempts. Victim eagle with large body size has 4.97 times less being pirated than victim eagle with small body size. To sum up, body size of eagle is key determing in success of pirating or protecting food. Age of pirating eagle has a less obvious effect. not based on the outcome scale</p>
+<p>since binomial regression is not guaranteed to produce a multivariate Gaussian posterior distribution, I will stik with the ulam model although their estimates look similar # <code>{r posterior prediction 01} # success_post &lt;- link_ulam(m11.3.2, data = dat) # success_mean &lt;- apply(success_post,2,mean) # success_ci &lt;- apply(success,2,PI) #</code></p>
+<pre class="r"><code>postcheck(m11.3.2,n=1e4)</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code># Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% intervals of the expectation, and 89% interval of simulated samples, respectively.
+# the data are roughly within the model prediction
+#one datapoint not obviously within it, but not correlated with LooPk value  </code></pre>
+<pre class="r"><code>k &lt;- LOOPk(m11.3.2)</code></pre>
+<pre><code>## Warning: Some Pareto k diagnostic values are too high. See help(&#39;pareto-k-diagnostic&#39;) for details.</code></pre>
+<pre class="r"><code>plot(dat$n,dat$y, xlab=&quot;total number of attempts&quot;, ylab=&quot;total success&quot;, col=rangi2, pch = ifelse(dat$Pid==1,1,16),lwd=2,xlim=c(0,30),ylim=c(0,30),cex=1+normalize(k))
+# set up the horizontal axis values to compute predictions at
+ns &lt;- 100
+n_seq &lt;- seq(from=0,to=30, length.out = ns)
+# predictions for pirating with large body size, more mature and victim eagle with small body size
+y_101 &lt;- link_ulam(m11.3.2,data = data.frame(n=n_seq, Pid=1, Vid=0, Aid=1)) 
+# link_ulam vs link
+#, n = data.frame(n=n_seq)) # why 2000 row in y, relationship with n_seq? # cannot use data=data.frame()
+y_mu &lt;- apply(y_101,2,mean)
+y_ci &lt;- apply(y_101,2,PI,prob=0.89)
+#post_2 &lt;- extract.samples(m11.3.2)
+lines(n_seq,y_mu,lty=1,lwd=1.5)
+shade(y_ci,n_seq,xpd=TRUE)</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>##(c) Now try to improve the model. Consider an interaction between the pirate’s size and age (immature or adult). Compare this model to the previous one, using WAIC. Interpret.</p>
+<pre class="r"><code>dat &lt;- list(y=d$y,n=d$n,Pid=d$Pid,Vid=d$Vid,Aid=d$Aid)
+dat$Tid &lt;- d$Pid+d$Aid
+m11.3.3 &lt;- ulam(
+  alist(
+    y ~ dbinom(n,p),
+    logit(p) &lt;- a+bT*Tid+bA*Aid, # Tid is aggregated Pid and Aid
+    a ~ dnorm(0,1.5),
+    bT ~ dnorm(0,1.5),
+    bA ~ dnorm(0,1.5)
+  ),data=dat, chains = 4,cores = 4, log_lik = TRUE
+)</code></pre>
+<pre class="r"><code>plot(precis(m11.3.3,depth = 2))</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre class="r"><code>compare(m11.3.2,m11.3.3, func = WAIC)</code></pre>
+<pre><code>##              WAIC     pWAIC    dWAIC    weight        SE      dSE
+## m11.3.2  32.20241  4.671244  0.00000 1.000e+00  5.916859       NA
+## m11.3.3 104.91535 20.040973 72.71294 1.624e-16 20.765322 22.10071</code></pre>
+</div>
 </div>
 
 
