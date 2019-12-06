@@ -31,8 +31,11 @@ m5.1 <- quap(
 )
 ```
 
+```{r}
+precis(m5.1)
+```
+
 ```{r simulate from priors} 
-# what does the below mean
 set.seed(10)
 prior <- extract.prior(m5.1)
 mu <- link(m5.1,post=prior,data = list(A=c(-2,2)))
@@ -74,7 +77,7 @@ lines(M_seq,mu_5.2.mean,lwd=2)
 shade(mu_5.2.PI,M_seq)
 ```
 ```{r drawing a DAG}
-install.packages('dagitty')
+#install.packages('dagitty')
 library(dagitty)
 dag5.1 <- dagitty("dag{
                   A->D
@@ -440,6 +443,7 @@ post <- extract.samples(m5.8)
 post$diff_fm <- post$a[,1]-post$a[,2]
 precis(post,depth = 2)
 ```
+
 # 5.3.2 Many categories
 ```{r load the primate milk data}
 library(rethinking)
@@ -447,8 +451,8 @@ data("milk")
 d <- milk
 ```
 
-
 ```{r Eload the primate milk data}
+unique(d$clade)
 # coerce the factor to an integer
 d$clade_id <- as.integer(d$clade)
 d$K <- scale(d$kcal.per.g)
