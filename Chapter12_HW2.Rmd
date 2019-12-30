@@ -1,0 +1,254 @@
+---
+title: "Chapter12_HW2"
+output: 
+  html_document: 
+    keep_md: yes
+---
+```{r}
+library(rethinking)
+library(dagitty)
+library(gtools)
+library("dplyr")
+library("janitor")
+```
+
+#11E1. What is the diﬀerence between an ordered categorical variable and an unordered one? Defne
+and then give an example of each.
+ordered categorical variable may has different increment between two and is ordered.
+
+example of ordered categorical variable: fungicide concentration treatment ladder such as 0,5ppm,10ppm,50ppm and 200ppm. The latter ones are higher than the previous ones, the difference between two adjacent levels may be different in effect of controlling fungicide.
+sporulation percentage over a time course sampling point, i.e., 0,7,11,15,21dpi, the latter ones are supposed to have more sporulation, and the difference between two adjacent levels may be different in terms of infection stages and interaction between the microbe and plants.
+
+example of unordered categorical variable: plant variety used to test plant-pathogen interaction, say 24 different variaties, it is a discrete categorical variable with no order.
+
+#11E2.What kind of link function does an ordered logistic regression employ? How does it diﬀer
+from an ordinary logit link?
+log cumulative link function. It uses cumulative probability at each datapoint, i.e., the cumulative probability of 3 is the sum of the probabilities of 3,2, and 1.
+
+#11M1.At a certain university, employees are annually rated from 1 to 4 on their productivity, with
+1 being least productive and 4 most productive. In a certain department at this certain university
+in a certain year, the numbers of employees receiving each rating were (from 1 to 4): 12, 36, 7, 41.
+Compute the log cumulative odds of each rating.
+```{r}
+uni_rate <- data.frame(rate=c(1:4),number=c(12,36,7,41))
+pr_k <- uni_rate$number/sum(uni_rate$number)
+cum_pr_k <- cumsum(pr_k)
+logit <- function(x)log(x/(1-x))
+(lco <- logit(cum_pr_k))
+```
+
+#11M2. Make a version of Figure 12.5 for the employee ratings data given just above.
+```{r}
+plot(1:4,cum_pr_k,type = "b",xlab = "response",ylab = "cumulative proportion",ylim = c(0,1))
+lines(c(1,1),c(0,cum_pr_k[1]),lwd=2,col="grey")
+lines(c(1.02,1.02),c(0,cum_pr_k[1]),lwd=2,col="blue")
+lines(c(2,2),c(0,cum_pr_k[2]),lwd=2,col="grey")
+lines(c(2.02,2.02),c(cum_pr_k[1],cum_pr_k[2]),lwd=2,col="blue")
+lines(c(3,3),c(0,cum_pr_k[3]),lwd=2,col="grey")
+lines(c(3.02,3.02),c(cum_pr_k[2],cum_pr_k[3]),lwd=2,col="blue")
+lines(c(4,4),c(0,cum_pr_k[4]),lwd=2,col="grey")
+lines(c(4.02,4.02),c(cum_pr_k[3],cum_pr_k[4]),lwd=2,col="blue")
+```
+
+#week7 problem 1
+In the Trolley data—data(Trolley)—we saw how education level (modeled as an ordered category) is associated with responses. Is this association causal? One plausible confound is that education is also associated with age, through a causal process: People are older when they fnish school than when they begin it.
+Reconsider the Trolley data in this light. Draw a DAG that represents hypothetical causal relationships among response, education, and age. Which statical model or models do you need to evaluate the causal inﬂuence of education on responses?
+Fit these models to the trolley data. What do you conclude about the causal relationships among these three variables?
+
+two DAGs describe whether there is direct influence on responce of age
+
+```{r}
+data("Trolley")
+d <- Trolley
+```
+
+```{r}
+edu_leves <- c(6,1,8,4,7,2,5,3)
+d$edu_new <- edu_leves[d$edu]
+#(as.integer(d$edu_new))
+```
+
+```{r}
+dat <- list(R=d$response, A=d$age, E=d$edu_new)
+datf <- data.frame(R=d$response,A=d$age,E=d$edu_new)
+cor(datf)
+```
+no strong correlation found between three variables in general
+relative strong correlation between age and education (0.37)
+stronger relationship between age and response compared to betweeen education and response (0.04 compared to 0.01)
+There could be backdoor from age to response
+
+Look at DAGs and testable implications
+```{r,fig.width=3,fig.height=3}
+dag1 <- dagitty(
+  "dag{
+  A->E
+  E->R
+  A->R
+  }"
+)
+plot(graphLayout(dag1))
+```
+A->E ?
+```{r}
+impliedConditionalIndependencies(dag1)
+```
+
+```{r,fig.width=3,fig.height=3}
+dag2 <- dagitty(
+  "dag{
+  A -> E
+  E -> R
+  }"
+)
+# coordinates(dag2) <- list(x=c(Edu=0,Res=1,Age=2),y=c(Edu=1,Res=0,Age=1))
+# drawdag(dag2)
+plot(graphLayout(dag2))
+```
+```{r}
+impliedConditionalIndependencies(dag2)
+```
+
+Build a model conditins on E, see whether that renders R independent of A
+Action point: build three models (E,R), (A,R) (E,R,A), see the change in slope parameters
+```{r}
+# model with only E, model 12.5 in textbook
+dat <- list(
+  R = d$response,
+  action = d$action,
+  intention = d$intention,
+  contact = d$contact,
+  E = as.integer(d$edu_new), # edu_new as an index
+  alpha = rep(2.1,7)         # delta prior
+  )
+
+m_E <- ulam(
+  alist(
+    R ~ ordered_logistic(phi, kappa),
+    phi <- bE*sum(delta_j[1:E])+bA*action+bI*intention+bC*contact,
+    kappa ~ normal(0,1.5),
+    c(bA,bI,bC,bE) ~ normal(0,1),
+    vector[8]:delta_j <<- append_row(0,delta),
+    simplex[7]: delta ~ dirichlet(alpha)
+  ), data = dat, chains = 3, cores = 3
+)
+```
+
+```{r}
+# model with only A as continuous variable
+d$age_norm <- normalize(d$age)
+dat <- list(
+  R = d$response,
+  action = d$action,
+  intention = d$intention,
+  contact = d$contact,
+  age = d$age_norm
+)
+
+m_A <- ulam(
+  alist(
+    R ~ ordered_logistic(phi,kappa),
+    phi <- bG*age+bA*action+bI*intention+bC*contact,
+    kappa ~ normal(0,1.5),
+    c(bA,bI,bC,bG) ~ normal(0,1)
+  ),data = dat, chains = 3,cores = 3
+)
+precis(m_A)
+```
+
+```{r}
+# model with E as ordered catogorical predictor and A as continuous variable
+d$age_norm <- normalize(d$age)
+dat <- list(
+  R = d$response,
+  action = d$action,
+  intention = d$intention,
+  contact = d$contact,
+  E = as.integer(d$edu_new),
+  alpha = rep(2.1,7),
+  age = d$age_norm
+)
+
+m_EA <- ulam(
+  alist(
+    R ~ ordered_logistic(phi,kappa),
+    phi <- bG*age+bE*sum(delta_j[1:E])+bA*action+bI*intention+bC*contact,
+    kappa ~ normal(0,1.5),
+    c(bA,bI,bC,bG,bE) ~ normal(0,1),
+    vector[8]:delta_j <<- append_row(0,delta),
+    simplex[7]:delta ~ dirichlet(alpha)
+  ),data = dat, chains = 3,cores = 3,iter = 4000
+)
+precis(m_EA)
+```
+
+```{r}
+plot(precis(m_E))
+plot(precis(m_A))
+plot(precis(m_EA))
+```
+add age into the model, the negative correlation between education and response changed to a positive correlation.
+Causal relationshps among three variables: higher education would cause higher response, while older people tend to give lower response. The correlation between age and response is stronger, so if a person with higher education and being older at the same time, the response would be lower.
+
+
+
+#week 7 problem 2
+Consider one more variable in the Trolley data: Gender. Suppose that gender might inﬂuence education as well as response directly. Draw the DAG now that includes response, education, age, and gender.
+Using only the DAG, is it possible that the inferences from Problem 1 are confounded by gender? If so, defne any additional models you need to infer the causal inﬂuence of education on response. What do you conclude?
+
+```{r,fig.width=5,fig.height=5}
+dag3 <- dagitty(
+  "dag{
+  G->E
+  G->R
+  A->E
+  E->R
+  A->R
+  }"
+)
+plot(graphLayout(dag3))
+```
+
+gender influence education and response at the same time.
+so it is possible the inferences from Problem 1 are confounded by gender.
+
+include gender as an indicator variable into model {A,E,R} 
+```{r}
+d$age_norm <- normalize(d$age)
+dat <- list(
+  R = d$response,
+  action = d$action,
+  intention = d$intention,
+  contact = d$contact,
+  gender = d$male,
+  E = as.integer(d$edu_new),
+  alpha = rep(2.1,7),
+  age = d$age_norm
+)
+
+m_EAG <- ulam(
+  alist(
+    R ~ ordered_logistic(phi,kappa),
+    phi <- bN*gender+bG*age+bE*sum(delta_j[1:E])+bA*action+bI*intention+bC*contact,
+    kappa ~ normal(0,1.5),
+    c(bA,bI,bC,bG,bE,bN) ~ normal(0,1),
+    vector[8]:delta_j <<- append_row(0,delta),
+    simplex[7]:delta ~ dirichlet(alpha)
+  ),data = dat, chains = 3,cores = 3,iter = 2000
+)
+precis(m_EAG)
+```
+conditoned on gender, age at the same time, education is not correlated with response.
+age has a negative correlation with response, while gender has a relatively strong positive correlation with reponse.
+The older a person, the less approvable, and being a male would give higher approvable response.
+Education has no influence on response scores.
+
+
+```{r}
+plot(precis(m_EAG))
+```
+
+11H1
+11H2
+11H3
+11H4
