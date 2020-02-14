@@ -1,0 +1,136 @@
+---
+title: "Feb_14"
+author: "Lin Zhang"
+date: "2/14/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r}
+library(rethinking)
+```
+
+```{r}
+garden_data <- read.table(file = "clarkia_transplant_data.csv",sep = ",",header = TRUE,stringsAsFactors = FALSE)
+d <- garden_data
+```
+
+```{r}
+str(d)
+table(d$nov_germ)
+summary(d$temperature_diff_fall)
+hist(d$temperature_diff_fall)
+```
+
+1. Fit a simple model with effects of temperature difference (temperature_diff_fall) on November germination (nov_germ). Temperature difference is already centered and scaled (i.e., negative values are the smallest temperature differences). Make sure to use the appropriate likelihood for the germination data (0 = no germ, 1  = germ). 
+```{r}
+dat <- list(
+  G = d$nov_germ,
+  TDF = d$temperature_diff_fall
+)
+
+m1 <- ulam(
+  alist(
+    G ~ dbinom(1,p),
+    logit(p) <- a+bt*TDF,
+    a ~ dnorm(0,1.5),
+    bt ~ dnorm(0,1.5)
+  ), data = dat, chains = 4, log_lik = TRUE
+)
+```
+
+2. Simulate from your priors to see if you've chosen reasonable priors, adjust them if necessary. 
+```{r}
+set.seed(1999)
+prior <- extract.prior(m1,n=1e4)
+p <- inv_logit(prior$a)
+dens(p,adj = 0.1)
+```
+prior looks fine
+
+These blocks were set up in the field, and had differences in soil depth, slope, and competitive environment. So maybe a model that includes block will describe the data better.
+3. Fit a model that includes an effect of block (blk), with no pooling.
+```{r}
+dat <- list(
+  G = d$nov_germ,
+  TDF = d$temperature_diff_fall,
+  B =d$blk
+)
+
+m2 <- ulam(
+  alist(
+    G ~ dbinom(1,p),
+    logit(p) <- a[B]+bt*TDF,
+    a[B]~ dnorm(0,1.5),
+    bt ~ dnorm(0,1.5)
+  ), data = dat, chains = 4, log_lik = TRUE
+)
+```
+
+The experiment included many individuals from each of the 15 populations. So, each individual is not an independent representative of a given temperature, but might be similar to other plants from that population for reasons besides temperature. 
+
+5. Build a model that accounts for this by including population (pop) and allowing partial pooling between populations A) without block, and B) with block included as in the model above. How does including population affect the temperature estimate?
+```{r}
+summary(is.na(d$pop))
+```
+
+```{r}
+d$pop <- as.factor(d$pop)
+pop_levels <- c(1:15)
+d$pop_level <- pop_levels[d$pop]
+dat <- list(
+  G = d$nov_germ,
+  TDF = d$temperature_diff_fall,
+  P = d$pop_level
+)
+
+m4 <- ulam(
+  alist(
+    G ~ dbinom(1,p),
+    logit(p) <- a[P]+bt*TDF,
+    a[P] ~ dnorm(a_bar,sigma),
+    a_bar ~ dnorm(0,1.5),
+    sigma ~ dexp(1),
+    bt ~ dnorm(0,1.5)
+  ), data = dat, chains = 4, log_lik = TRUE, iter = 2000
+)
+```
+
+just include block as a dummy variable, how to use it hierachically
+```{r}
+d$pop <- as.factor(d$pop)
+pop_levels <- c(1:15)
+d$pop_level <- pop_levels[d$pop]
+dat <- list(
+  G = d$nov_germ,
+  TDF = d$temperature_diff_fall,
+  P = d$pop_level,
+  B =d$blk
+)
+
+m5 <- ulam(
+  alist(
+    G ~ dbinom(1,p),
+    logit(p) <- a[P]+a[B]+bt*TDF,
+    a[P] ~ dnorm(a_bar,sigma),
+    a[B] ~ dnorm(0,sigma_b),
+    a_bar ~ dnorm(0,1.5),
+    c(sigma,sigma_b) ~ dexp(1),
+    bt ~ dnorm(0,1.5)
+  ), data = dat, chains = 4, log_lik = TRUE, iter = 2000
+)
+```
+
+6. Compare the five models you built using WAIC. Which fits best? #four models?
+```{r}
+compare(m1,m2,m4,m5)
+```
+model partial-pooling across both block and population has best prediction
+
+7. Plot effects of temperature difference for the average block, and also make a plot that includes the variability across blocks.
+```{r}
+post <- extract.samples(m5)
+```
+
+There are other complexities to this data. For example, there is also some family structure within populations (dam and sire) which could be included as hierarchical effects. There are also other response variables (November size, March survival and size, first flower date, last flower date, fruit number, estimated seed production) that might require different likelihoods (and in some cases treatment for over-dispersion or zero inflation). So if the above problems were too easy and you feel adventurous, you could try analyzing one of these responses instead of germination (you will need to filter out missing observations). 
