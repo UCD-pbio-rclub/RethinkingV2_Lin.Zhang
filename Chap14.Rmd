@@ -1,0 +1,37 @@
+---
+title: "Chap14"
+author: "Lin_Zhang"
+date: "3/19/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+1. Review last weeks material.
+#14E1
+#14E2
+#14M1
+#14M2
+#14M3
+
+2. Update last weeks problems if necessary.  Can you fit non-centered models?  Are you using multivariate normal distributions where appropriate?
+
+
+
+3. Rongkui's Instrumental Variable problem (see earlier email)
+
+
+4. Attached are data from an experiment measuring hypocotyl length in ~ 180 natural arabidopsis accessions grown in high and low red:far-red light.  We want to know if there are differences in accessions in their length in high R:FR ("H") and in their response to low R:FR("L").  Also we want to obtain an estimate for hypocotyl length for each accession in high and low R:FR for downstream GWAS analysis.
+
+Relevant variables:
+length -- hypocotyl length
+line -- unique ID for each accession (you could also use nativename)
+light -- indicator for high or low RFR
+exp -- two independent experiments were done
+plate -- this is an incomplete block design with a subset (10? 12?) of accessions on each plate.
+Let's try a variety of increasingly complex models:
+ No pooling
+ Partial pooling of intercepts and slopes for line and intercepts for plate and experiment, but treat each variable separately (no multivariate component).  you might also consider adding an experiment slope effect
+As 2, but use a multivariate normal model for the line slope and intercept effects
+As 3, but non-centered
+Evaluate and compare the models.  Is there evidence of line, treatment, and line X treatment effects?  How does the magnitude of the experiment and plate effects compare to the line effects?
+

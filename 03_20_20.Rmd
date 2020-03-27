@@ -1,0 +1,260 @@
+---
+title: "Chap14"
+author: "Lin_Zhang"
+date: "3/19/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+1. Review last weeks material.
+#14E1. Add to the following model varying slopes on the predictor x.
+yi ∼ Normal(µi,σ)
+µi = αgroup[i] + βxi
+αgroup ∼ Normal(α,σα)
+α ∼ Normal(0,10)
+β ∼ Normal(0,1)
+σ ∼ HalfCauchy(0,2)
+σα ∼ HalfCauchy(0,2)  #HalfCauchy?
+
+yi ~ normal(ui,σ)
+µi = αgroup[i] + βxi
+
+αgroup ∼ Normal(α,σα)
+α ∼ Normal(0,10)
+σα ∼ HalfCauchy(0,2)
+
+xi ~ normal(b,σb)
+b ∼ Normal(0,10)
+σb ∼ HalfCauchy(0,2)
+
+β ∼ Normal(0,1)
+σ ∼ HalfCauchy(0,2)
+
+
+#14E2. Think up a context in which varying intercepts will be positively correlated with varying slopes. Provide a mechanistic explanation for the correlation.
+(1) Example for (not-sure) correlated varying intercepts with varying slopes
+An isolate sporulate at different timepoints, say 7,11,15dpi, the slope is the rate of sporulation across timepoints. Now apply fungicide before
+the inoculate the isolate to the plant. Since different isolates have different sensitivity level to fungicide, sporulation of some would be 
+totally knocked down while the insensitive ones can sporulate to some extent. Now let's look at genetically distinct insensitive populations of 
+isolates: Group1, generally highly insensitive; Group2, generally intermediate insensitive; Group3,generally low insensitive. Now let's model the sporulation percentage over different time points, for three groups of isolates, with application of fungicide. Spoculation percentage is counts of plants out of ten plants being tested, which is sporulating at the time of observation.
+
+S ~ Possion(10,p)
+p = a+bt*T 
+
+here a is varying intercept, which varied btw different groups of isolates, who has a baseline sporulation different in response to fungicide
+bt is a varying slope, which varied btw different groups of isolates as well. The slope is the sporulation rate over time. The varying intecept and slopes are (negatively/positively) correlated. Because isolate more insensitive reached a high level of sporulation at the first timepoint, which is the usual time point for full sporulation. Say sometimes would reach 100% sporulation. So it has little space to increase more. So the actual sporualtion rate over time might be smaller. However, some sensitive isolates would not sporulate further even with time elasping, so it remains to see what the data says.
+
+
+(2) Example for negatively correlated varying intercepts with varying slopes
+
+Same experiment as above but not with fungicide application, assume the plants used are "universally" susceptible to all isolates. So all isolates should be fully sporulate sooner or later, around 7-11dpi. So the ones sporulate higher earlier would expect a smaller sporulation rate over time, compared to ones that has a low sporulation, but able to catch up later. Here the varying intercepts and slopes are negatively correlated.
+
+(3) Example for positively correlated varying intercepts with varying slopes
+Suppose a heterokaryon isolate was inoculated to a plant. It has different nuclei types within it. The one survive better at that cultivar, or under that circumstance would be has a higher proportion in the nuclei composition/balance over time. Say there are different isolates with different nuclei composition, of which Nuclei_A fit our selection condition best. So the sporulation percentage of that isolate (a combination of different nuclei) would positive correlated with proportion of Nuclei_A in that isolate. Let's fit a model to the sporulation percentage after 
+S ~ Possion(10,p)
+p = a+bP*P 
+
+P is the initial percentage of NucleiA in a specific isolate, while a is the baseline sporulation of different isolates. They both are positively correlated with the proportion of NucleiA in different isolate. So they are positivelyl correlated too.
+
+
+Now Let's fit a model to the proportion of major nuclei after first round of selection over additional Round of selection. As it is the the dominant nuclei fit better in the first round of selection, its proportion is going to increase over time upon same selection treatment. However the increase rate remains unclear whehter it is higher. 
+
+N ~ Normal(u,σ)
+u = a+bR*R
+
+#14M1.Repeat the café robot simulation from the beginning of the chapter. This time, set rho to zero, so that there is no correlation between intercepts and slopes. How does the posterior distribution of the correlation reflect this change in the underlying simulation?
+
+```{r}
+a <- 3.5            # average morning wait time
+b <- (-1)           # average difference afternoon wait time
+sigma_a <- 1        # std dev in intercepts
+sigma_b <- 0.5      # std dev in slopes
+rho <- (-0.7)      # correlation between intercepts and slopes
+```
+
+```{r}
+Mu <- c( a , b )
+```
+
+```{r}
+cov_ab <- sigma_a*sigma_b*rho
+Sigma <- matrix( c(sigma_a^2,cov_ab,cov_ab,sigma_b^2) , ncol=2 )
+```
+
+```{r}
+N_cafes <- 20
+```
+
+```{r}
+library(MASS)
+set.seed(5) # used to replicate example
+vary_effects <- mvrnorm( N_cafes , Mu , Sigma )
+```
+
+```{r}
+a_cafe <- vary_effects[,1]
+b_cafe <- vary_effects[,2]
+```
+
+```{r}
+library(rethinking)
+plot( a_cafe , b_cafe , col=rangi2 ,
+    xlab="intercepts (a_cafe)" , ylab="slopes (b_cafe)" )
+
+# overlay population distribution
+library(ellipse)
+for ( l in c(0.1,0.3,0.5,0.8,0.99) )
+    lines(ellipse(Sigma,centre=Mu,level=l),col=col.alpha("black",0.2))
+```
+No correlation shown between intercept and slope
+
+simulates 10 visits to each cafe, 5 in the morning and 5 in the afternoon, and combine into a dataframe
+```{r}
+set.seed(22)
+N_visits <- 10
+afternoon <- rep(0:1,N_visits*N_cafes/2)
+cafe_id <- rep( 1:N_cafes , each=N_visits )
+mu <- a_cafe[cafe_id] + b_cafe[cafe_id]*afternoon
+sigma <- 0.5  # std dev within cafes
+wait <- rnorm( N_visits*N_cafes , mu , sigma )
+d <- data.frame( cafe=cafe_id , afternoon=afternoon , wait=wait )
+```
+
+fit the model
+```{r}
+m14M1 <- ulam(
+    alist(
+        wait ~ normal( mu , sigma ),
+        mu <- a_cafe[cafe] + b_cafe[cafe]*afternoon,
+        c(a_cafe,b_cafe)[cafe] ~ multi_normal( c(a,b) , Rho , sigma_cafe ),
+        a ~ normal(5,2),
+        b ~ normal(-1,0.5),
+        sigma_cafe ~ exponential(1),
+        sigma ~ exponential(1),
+        Rho ~ lkj_corr(2)
+    ) , data=d , chains=4 , cores=4 , log_lik = TRUE)
+```
+!above model not go through with prompt
+The largest R-hat is NA, indicating chains have not mixed.
+Running the chains for more iterations may help
+tried iter up to 6000, not working
+```{r,fig.height=10,fig.width=10}
+#marginal posterior distributions
+plot(precis(m14M1,depth = 3))
+```
+```{r}
+precis(m14M1,depth = 3)
+```
+
+```{r}
+traceplot(m14M1)
+```
+```{r}
+trankplot(m14M1,n_cols = 2)
+```
+inspect posterior distribution of varying effects
+```{r}
+post <- extract.samples(m14M1)
+#posterior correlation between intercepts and slopes
+dens(post$Rho[,1,2])
+```
+The posterior is concentrated on 0 now, refelecting the data generation process
+
+non-centered ?
+# ```{r}
+# m14M1_2 <- ulam(
+#     alist(
+#         wait ~ normal( mu , sigma ),
+#         mu <- a[cafe] + b[afternoon],
+# 
+#         # adapative priors - non-centered
+#        #fixed priors
+#        # a ~ normal(5,2),
+#       # b ~ normal(-1,0.5),
+#         sigma_cafe ~ exponential(1),
+#         sigma ~ exponential(1),
+#         cholesky_factor_corr[4]:L_Rho_cafe ~ lkj_corr_cholesky(2)
+#       
+#       # compute ordinary correlation matrixes from Cholesky factors
+#       gq> matrix[4,4]:Rho_cafe <<- multiply_lower_tri_self_transpose(L_Pho_cafe)
+#     ) , data=d , chains=4 , cores=4 , log_lik=TRUE)
+# ```
+
+#14M2.Fit this multilevel model to the simulated café data:
+Wi ∼ Normal(µi; σ)
+µi = αcafé[i] + βcafé[i]Ai
+αcafé ∼ Normal(α; σα)
+βcafé ∼ Normal(β; σβ)
+α ∼ Normal(0; 10)
+β ∼ Normal(0; 10)
+σ ∼ HalfCauchy(0; 1)  #halfCauchy ???
+σα ∼ HalfCauchy(0; 1)
+σβ ∼ HalfCauchy(0; 1)
+Use WAIC to compare this model to the model from the chapter, the one that uses a multi-variate
+Gaussian prior. Explain the result.
+set Rho to -0.7, the same as in the book
+```{r}
+m14M2 <- ulam(
+    alist(
+        wait ~ normal(mu , sigma),
+        mu <- a_cafe[cafe] + b_cafe[cafe]*afternoon,
+        
+        # multi-level model
+        a_cafe[cafe] ~ normal(a,sigma_a),
+        b_cafe[cafe] ~ normal(b,sigma_b),
+        
+        # adaptative priors centered
+        a ~ normal(0,10),
+        b ~ normal(0,10),
+      
+        # fixed prior
+        sigma ~ dcauchy(0,1), #HalfCauchy ???
+        sigma_a ~ dcauchy(0,1),
+        sigma_b ~ dcauchy(0,1)
+    ) , data=d , chains=4 , cores=4, log_lik = TRUE)
+```
+
+```{r}
+precis(m14M2,depth=2)
+```
+
+inspect posterior distribution
+```{r}
+post <- extract.samples(m14M2)
+#posterior correlation between intercepts and slopes
+dens(post$a)
+```
+
+compare multi-level and multi-variate Gaussion model
+```{r}
+compare(m14M1,m14M2)
+```
+multi-variate Gaussion model is better, but overall they are quite similar as in below.
+
+```{r}
+plot(compare(m14M1,m14M2))
+```
+
+
+2. Update last weeks problems if necessary. Can you fit non-centered models? Are you using multivariate normal distributions where appropriate?
+
+
+
+3. Rongkui's Instrumental Variable problem (see earlier email)
+
+
+4. Attached are data from an experiment measuring hypocotyl length in ~ 180 natural arabidopsis accessions grown in high and low red:far-red light.  We want to know if there are differences in accessions in their length in high R:FR ("H") and in their response to low R:FR("L").  Also we want to obtain an estimate for hypocotyl length for each accession in high and low R:FR for downstream GWAS analysis.
+
+Relevant variables:
+length -- hypocotyl length
+line -- unique ID for each accession (you could also use nativename)
+light -- indicator for high or low RFR
+exp -- two independent experiments were done
+plate -- this is an incomplete block design with a subset (10? 12?) of accessions on each plate.
+Let's try a variety of increasingly complex models:
+ No pooling
+ Partial pooling of intercepts and slopes for line and intercepts for plate and experiment, but treat each variable separately (no multivariate component).  you might also consider adding an experiment slope effect
+As 2, but use a multivariate normal model for the line slope and intercept effects
+As 3, but non-centered
+Evaluate and compare the models.  Is there evidence of line, treatment, and line X treatment effects?  How does the magnitude of the experiment and plate effects compare to the line effects?
+
