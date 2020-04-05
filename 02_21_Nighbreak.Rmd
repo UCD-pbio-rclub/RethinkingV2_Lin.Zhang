@@ -8,11 +8,12 @@ output:
 ---
 ```{r}
 library(rethinking)
+library(dplyr)
 ```
-Q1: a. Load the dataset. Look for column "Score" for the response variable we are interested in. A developmental score of 1 or 2 indicates vegetative growth, while a score of 3, 4, or 5 indicates reproductive growth. Create a "Reproduction" column with values 0 and 1, where 0 indicates vegetative growth and 1 indicates reproductive growth. 
+Q1: a. Load the dataset. Look for column "Score" for the response variable we are interested in. A developmental score of 1 or 2 indicates vegetative growth, while a score of 3,4 or 5 indicates reproductive growth. Create a "Reproduction" column with values 0 and 1, where 0 indicates vegetative growth and 1 indicates reproductive growth. 
 ```{r}
 nightbreak <- read.csv(file = "Nightbreak_02_08_20_Rclub.csv",header = TRUE,sep = ",",stringsAsFactors = FALSE)
-nightbreak$Reproduction <- ifelse(nightbreak < 4, 0,1)
+d <- nightbreak
 ```
 
 b. (optional) Take a look at columns "loc1" through "loc5". The levels "A" or "P" indicate which parental allele the RIL has inherited. Can you think of a reason why there are 32 lines in this experiment?
@@ -21,31 +22,102 @@ b. (optional) Take a look at columns "loc1" through "loc5". The levels "A" or "P
 Q2:
 Using the "Reproduction" column you created in Q1a as the response variable, fit a simple model with effects of genotype ("RIL") and treatment ("Treatment") on the rate of transitioning to reproductive growth by 2/8/20. (Things you might want to consider: appropriate likelihood function, intersection term). 
 ```{r error= TRUE}
-d <- nightbreak
-d$Treatment <- as.factor(d$Treatment)
-treat_levels <- c(1:3)
-d$treat_levels <- treat_levels[d$Treatment]
-unique(d$RIL)
-d$RIL[d$RIL=="PI"] <- c("0")
-d$RIL[d$RIL=="Arm"] <- c("1")
-
+d$Reproduction <- if_else(d$Score < 3,0L,1L)
+d$nightbreak <- if_else(d$Treatment=="NightBreak",1L,0L)
+d$curtain <- if_else(d$Treatment=="Control_NoCurtain",0L,1L)
 
 dat <- list(
-  TR = d$treat_levels,
-  G = as.numeric(d$RIL),
+  NB = d$nightbreak,
+  CR = d$curtain,
+  G = as.numeric(as.factor(d$RIL)),
   R = d$Reproduction
 )
 
 m1 <- ulam(
   alist(
     R ~ dbinom(1,p),
-    logit(p) <- a[G] + bT*TR,
-    a[G] ~ dnorm(0,1.5),
-    bT ~ dnorm(0,1.5)
+    logit(p) <- a[G]+bN*NB+bC*CR+INC[G]*CR+INB[G]*NB,
+    a[G] ~ dnorm(0,1.5),  # inv_logit(-3) to inv_logit(3)
+    c(bN,bC) ~ dnorm(0,1.5),
+    INC[G] ~ dnorm(0,.5),
+    INB[G] ~ dnorm(0,.5)
     ), data = dat, chains = 4, log_lik = TRUE
 )
+# why cannot go through after adding interaction
+```
+
+```{r}
+traceplot(m1)
+precis(m1,depth = 2)
+```
+
+```{r}
+coef(m1)["a"]
+inv_logit(coef(m1)["a"]) # flowering coefficient for control wo curtain, wo nightbreak
+summary()  #why higher here
+```
+
+```{r}
+inv_logit(coef(m1)["a"]+coef(m1)["b_nb"]) # coefficient for adding night break
 ```
 
 Q3:
 Because we are more interested in the effects of individual loci than the performance of specific genotypes, fit a model with additive effects of the five loci and effect of treatment.  
+```{r}
+
+```
+
+5 loci responsible for daylength from QTL 
+loci 2,3,5 promote flowering, from parent P
+however, no interaction seen between 5 loci and the treatment
+nightbreak would promote flowering regardless of the loci
+the loci would promote flowering regardless of nightbreak
+
+How long is the night length in the nightbreak and field experiment?
+Greenhouse warmer than the field
+
+Q5 interesting by ordered categorical outcome
+Q4 model: anyway to simplify ??
+
+
+the loci not general regulator of development (1,2,3,4,5) but regulator of reproduction
+
+Pooling across plots (autocorrelation spatial relationship)
+Pooling across replicates
+Puting two controls together
+
+Q7.
+nightbreak increases reproduction probability 
+A is the one suppose to be responsing to nighbreak , A is the one needs long days to flower
+
+plot flowering time ~ genotype, to see if the model are making sense of the raw data
+
+flip loci coding -> difference? (maybe due to logit transform)
+
+Phenotype: first time to flowering (scoring every day)  --- right now the proportion data more look like my sporulation percentage
+
+Also segregate for height, this population
+Prior prediction, function
+posterior plot
+
+? censored cat problem ?
+
+# apply to my data
+0,5,10,50,200 ppm treatment (ordered categorical predictor variable), 
+Response: sporulation percentage (sporulate percentage out of 10 seedlings, Poisson with a fixed interval),
+Timepoints: 7,11,15 dpi  (time-course, censored cat?)
+isolate ~ genotype as index variable
+plant cultured on
+no rep, no plot
+
+Question:
+genotype ~ treatment interaction
+Poisson
+
+Python for datascience: not very well but know how to find out
+Pandas, Nonpy
+
+Covariance between parameters, covariance is a pain? covariance in linear regression
+14.1
+Video  
 
