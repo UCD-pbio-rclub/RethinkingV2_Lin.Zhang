@@ -1,0 +1,546 @@
+---
+title: "Chap14"
+author: "Lin_Zhang"
+date: "3/19/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+#14M1.Repeat the café robot simulation from the beginning of the chapter. This time, set rho to zero, so that there is no correlation between intercepts and slopes. How does the posterior distribution of the correlation reflect this change in the underlying simulation?
+
+```{r}
+a <- 3.5            # average morning wait time
+b <- (-1)           # average difference afternoon wait time
+sigma_a <- 1        # std dev in intercepts
+sigma_b <- 0.5      # std dev in slopes
+rho <- (-0.7)      # correlation between intercepts and slopes
+```
+
+```{r}
+Mu <- c( a , b )
+```
+
+```{r}
+cov_ab <- sigma_a*sigma_b*rho
+Sigma <- matrix( c(sigma_a^2,cov_ab,cov_ab,sigma_b^2) , ncol=2 )
+```
+
+```{r}
+N_cafes <- 20
+```
+
+```{r}
+library(MASS)
+set.seed(5) # used to replicate example
+vary_effects <- mvrnorm( N_cafes , Mu , Sigma )
+```
+
+```{r}
+a_cafe <- vary_effects[,1]
+b_cafe <- vary_effects[,2]
+```
+
+```{r}
+library(rethinking)
+plot( a_cafe , b_cafe , col=rangi2 ,
+    xlab="intercepts (a_cafe)" , ylab="slopes (b_cafe)" )
+
+# overlay population distribution
+library(ellipse)
+for ( l in c(0.1,0.3,0.5,0.8,0.99) )
+    lines(ellipse(Sigma,centre=Mu,level=l),col=col.alpha("black",0.2))
+```
+No correlation shown between intercept and slope
+
+simulates 10 visits to each cafe, 5 in the morning and 5 in the afternoon, and combine into a dataframe
+```{r}
+set.seed(22)
+N_visits <- 10
+afternoon <- rep(0:1,N_visits*N_cafes/2)
+cafe_id <- rep( 1:N_cafes , each=N_visits )
+mu <- a_cafe[cafe_id] + b_cafe[cafe_id]*afternoon
+sigma <- 0.5  # std dev within cafes
+wait <- rnorm( N_visits*N_cafes , mu , sigma )
+d <- data.frame( cafe=cafe_id , afternoon=afternoon , wait=wait )
+```
+
+fit the model
+```{r}
+m14M1 <- ulam(
+    alist(
+        wait ~ normal( mu , sigma ),
+        mu <- a_cafe[cafe] + b_cafe[cafe]*afternoon,
+        c(a_cafe,b_cafe)[cafe] ~ multi_normal( c(a,b) , Rho , sigma_cafe ),
+        a ~ normal(5,2),
+        b ~ normal(-1,0.5),
+        sigma_cafe ~ exponential(1),
+        sigma ~ exponential(1),
+        Rho ~ lkj_corr(2)
+    ) , data=d , chains=4 , cores=4 , log_lik = TRUE)
+```
+!above model not go through with prompt
+The largest R-hat is NA, indicating chains have not mixed.
+Running the chains for more iterations may help
+tried iter up to 6000, not working
+```{r,fig.height=10,fig.width=10}
+#marginal posterior distributions
+plot(precis(m14M1,depth = 3))
+```
+```{r}
+precis(m14M1,depth = 3)
+```
+
+```{r}
+traceplot(m14M1)
+```
+```{r}
+trankplot(m14M1,n_cols = 2)
+```
+inspect posterior distribution of varying effects
+```{r}
+post <- extract.samples(m14M1)
+#posterior correlation between intercepts and slopes
+dens(post$Rho[,1,2])
+```
+The posterior is concentrated on 0 now, refelecting the data generation process
+
+non-centered ?
+# ```{r}
+# m14M1_2 <- ulam(
+#     alist(
+#         wait ~ normal( mu , sigma ),
+#         mu <- a[cafe] + b[afternoon],
+# 
+#         # adapative priors - non-centered
+#        #fixed priors
+#        # a ~ normal(5,2),
+#       # b ~ normal(-1,0.5),
+#         sigma_cafe ~ exponential(1),
+#         sigma ~ exponential(1),
+#         cholesky_factor_corr[4]:L_Rho_cafe ~ lkj_corr_cholesky(2)
+#       
+#       # compute ordinary correlation matrixes from Cholesky factors
+#       gq> matrix[4,4]:Rho_cafe <<- multiply_lower_tri_self_transpose(L_Pho_cafe)
+#     ) , data=d , chains=4 , cores=4 , log_lik=TRUE)
+# ```
+
+#14M2.Fit this multilevel model to the simulated café data:
+Wi ∼ Normal(µi; σ)
+µi = αcafé[i] + βcafé[i]Ai
+αcafé ∼ Normal(α; σα)
+βcafé ∼ Normal(β; σβ)
+α ∼ Normal(0; 10)
+β ∼ Normal(0; 10)
+σ ∼ HalfCauchy(0; 1)  #halfCauchy ???
+σα ∼ HalfCauchy(0; 1)
+σβ ∼ HalfCauchy(0; 1)
+Use WAIC to compare this model to the model from the chapter, the one that uses a multi-variate
+Gaussian prior. Explain the result.
+set Rho to -0.7, the same as in the book
+```{r}
+m14M2 <- ulam(
+    alist(
+        wait ~ normal(mu , sigma),
+        mu <- a_cafe[cafe] + b_cafe[cafe]*afternoon,
+        
+        # multi-level model
+        a_cafe[cafe] ~ normal(a,sigma_a),
+        b_cafe[cafe] ~ normal(b,sigma_b),
+        
+        # adaptative priors centered
+        a ~ normal(0,10),
+        b ~ normal(0,10),
+      
+        # fixed prior
+        sigma ~ dcauchy(0,1), #HalfCauchy ???
+        sigma_a ~ dcauchy(0,1),
+        sigma_b ~ dcauchy(0,1)
+    ) , data=d , chains=4 , cores=4, log_lik = TRUE)
+```
+
+```{r}
+precis(m14M2,depth=2)
+```
+
+inspect posterior distribution
+```{r}
+post <- extract.samples(m14M2)
+#posterior correlation between intercepts and slopes
+dens(post$a)
+```
+
+compare multi-level and multi-variate Gaussion model
+```{r}
+compare(m14M1,m14M2)
+```
+multi-variate Gaussion model is better, but overall they are quite similar as in below.
+
+```{r}
+plot(compare(m14M1,m14M2))
+```
+
+
+2. Update last weeks problems if necessary. Can you fit non-centered models? Are you using multivariate normal distributions where appropriate?
+
+?how to fit non-centered model to cafe dataset
+
+3. Rongkui's Instrumental Variable problem (see earlier email)
+simulated data on effect of education on wages
+```{r}
+set.seed(73)
+N <- 500 #simulate 500 people
+U_sim <- rnorm(N)
+Q_sim <- sample(1:4,size = N,replace = TRUE) # quarter of the year each person is born in 
+E_sim <- rnorm(N, U_sim+Q_sim) # larger value of Q_sim associated with more education, beta_QE is one
+W_sim <- rnorm(N, U_sim+0*E_sim) #education has no effect on wages, beta_EW is zero
+dat_sim <- list(
+  W = standardize(W_sim),
+  E = standardize(E_sim),
+  Q = standardize(Q_sim)
+)
+```
+
+E and W confounded by U, without knowing U, directly regress wages on education would generate
+the inference of "education leads to higher wages"
+```{r}
+m14.4 <- ulam(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- aW + bEW*E,
+    aW ~ dnorm(0,0.2),
+    bEW ~ dnorm(0,0.5),
+    sigma ~ dexp(1)
+  ),data = dat_sim, chains = 4, cores = 4
+)
+```
+
+```{r,fig.width=15}
+trankplot(m14.4)
+```
+
+```{r}
+precis(m14.4)
+```
+
+Consider W & E as covariance caused by the unknown confounder U
+```{r}
+m14.5 <- ulam(
+  alist(
+    c(W,E) ~ multi_normal(c(muW,muE), Rho, Sigma),
+    muW <- aW + bEW * E,
+    muE <- aE + bQE * Q,
+    c(aW,aE) ~ normal(0,0.2),
+    c(bEW,bQE) ~ normal(0,0.5),
+    Rho ~ lkj_corr(2),
+    Sigma ~ exponential(1)
+  ), data = dat_sim, chains = 4, cores = 4
+)
+```
+```{r}
+trankplot(m14.5)
+```
+```{r}
+plot(precis(m14.5,depth = 3))
+```
+try other simulations, sample from posterior !new code
+```{r}
+m14.4x <- ulam(m14.4, data = dat_sim, chains = 4, cores = 4)
+m14.5x <- ulam(m14.5, data = dat_sim, chains = 4, cores = 4)
+```
+simulate a positive effect of education on wages
+```{r}
+set.seed(73)
+N <- 500 #simulate 500 people
+U_sim <- rnorm(N)
+Q_sim <- sample(1:4,size = N,replace = TRUE) # quarter of the year each person is born in 
+E_sim <- rnorm(N, U_sim+Q_sim) # larger value of Q_sim associated with more education, beta_QE is one
+W_sim <- rnorm(N, U_sim+0.2*E_sim) #education has no effect on wages, beta_EW is zero
+dat_sim <- list(
+  W = standardize(W_sim),
+  E = standardize(E_sim),
+  Q = standardize(Q_sim)
+)
+```
+
+```{r}
+library(dagitty)
+dagIV <- dagitty("dag{
+E -> W
+E <- U -> W
+Q -> E
+}")
+instrumentalVariables(dagIV, exposure = "E", outcome = "W")
+```
+Look at the data from the paper later
+
+4. Attached are data from an experiment measuring hypocotyl length in ~ 180 natural arabidopsis accessions grown in high and low red:far-red light.  We want to know if there are differences in accessions in their length in high R:FR ("H") and in their response to low R:FR("L").  Also we want to obtain an estimate for hypocotyl length for each accession in high and low R:FR for downstream GWAS analysis.
+
+Relevant variables:
+length -- hypocotyl length
+line -- unique ID for each accession (you could also use nativename)
+light -- indicator for high or low RFR
+exp -- two independent experiments were done
+plate -- this is an incomplete block design with a subset (10? 12?) of accessions on each plate.
+```{r}
+library(rethinking)
+hypocotypl <- read.csv(file = "hyp.lengths.both.experiments.labels.csv",stringsAsFactors = FALSE)
+hypocotypl$S =ifelse(hypocotypl$light=="H",1L,2L)
+hypocotypl$E =ifelse(hypocotypl$exp =="A",1L,2L)
+hypocotypl$L = standardize(hypocotypl$length)
+#plate_levels <- c(1:152)
+hypocotypl$P <- as.numeric(as.factor(hypocotypl$plate))
+d <- list(
+  S = hypocotypl$S,
+  E = hypocotypl$E,
+  L = hypocotypl$L,
+  P = hypocotypl$P,
+  A = as.numeric(as.factor(hypocotypl$line))
+)
+```
+
+Let's try a variety of increasingly complex models:
+No pooling
+```{r}
+m1 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma), #normal() ?
+    mu <- a+b_shield*S, #a mean light treatment effect on accesion
+    a ~ dnorm(0,1.5),
+    b_shield ~ dnorm(0,1.5),
+    sigma ~ dexp(1)  #exponential()
+  ),data = d, chains = 4, cores = 4, log_lik = TRUE
+)
+```
+
+```{r}
+trankplot(m1)
+```
+
+```{r}
+precis(m1)
+```
+the standardized mean length is around 0.4
+high red:far-red light ratio a negative influence on hypocotyl length on all accesions in general
+there is a large variation within the data
+
+Partial pooling of intercepts and slopes for line and intercepts for plate and experiment, but treat each variable separately (no multivariate component).  you might also consider adding an experiment slope effect
+```{r}
+#no experiment slope effect
+m2 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma),
+    mu <- a[A]+b[A]*S+a_p[P]+a_e[E],
+    
+    # partial pooling & adaptative prior
+    a[A] ~ dnorm(a_bar,sigma),
+    a_bar ~ dnorm(0,1.5),
+    sigma ~ dexp(1),
+    
+    b[A] ~ dnorm(0,sigma_b),
+    sigma_b ~ dexp(1),
+    
+    a_p[P] ~ dnorm(0,sigma_p),
+    sigma_p ~ dexp(1),
+    
+    a_e[E] ~ dnorm(0,sigma_e),
+    sigma_e ~ dexp(1) 
+  ),data = d, chains = 4, cores = 4, log_lik = TRUE, iter = 4000 
+)
+#re-parameterize?
+```
+```{r}
+trankplot(m2)
+```
+n_eff is < 50 for a[accesion], doubt if it could get much better with more iterations,model should be modified
+other parameters b[accesion] is very good
+a[p] bad ~500 n_eff
+a[e] bad ~50
+
+```{r}
+precis(m2,depth = 2)
+```
+
+
+#0329 stop here 14.2 in book
+As 2, but use a multivariate normal model for the line slope and intercept effects
+```{r}
+# multivariate normal model for line slope and intercept, no plate or experiment
+m3 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma),
+    mu <- a_line[A]+b_line[A]*S,
+    # partial pooling & adaptative prior
+    c(a_line,b_line)[A] ~ multi_normal(c(a,b),Rho,sigma_A),
+    a ~ dnorm(0,2),
+    b ~ dnorm(0,1),
+    sigma_A ~ dexp(1),
+    Rho ~ lkj_corr(2),
+    sigma ~ dexp(1)
+    ),data = d, chains = 4, cores = 4, log_lik = TRUE, control = list(max_treedepth=15)
+)
+```
+```{r}
+#pairs(m3)
+```
+
+```{r}
+trankplot(m3)
+precis(m3,depth = 3)
+```
+the standardized mean length is around 0.32 compared to 0.4 in the model with no pooling (m1)
+high red:far-red light ratio a negative influence on hypocotyl length on all accesions in general
+beta is around -0.81 89%[-0.86 to -0.76] compared to -0.8 89%[-0.82 to -0.78] in the model with no pooling (m1)
+
+```{r}
+m3_par_light <- as.data.frame(precis(m3,depth = 3)$mean[1:180])
+hist(m3_par_light$`precis(m3, depth = 3)$mean[1:180]`,xlab = "influence of high red:far-red light ratio on hypocotyl length of Arapidopsis accesions")
+```
+In general, high red:far red light ratio has a negative effect on hypocotyl length, only positive on a few accessions
+```{r}
+m3_par_line <- as.data.frame(precis(m3,depth = 3)$mean[181:360])
+hist(m3_par_line$`precis(m3, depth = 3)$mean[181:360]`,xlab = "influence of genotype on hypocotyl length of Arapidopsis accesions ")
+```
+
+
+```{r}
+# multivariate normal model for line slope and intercept, with plate and experiment
+m4 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma),
+    mu <- a_line[A]+b_line[A]*S+a_plate[P]+a_exp[E],
+    # partial pooling & adaptative prior
+    c(a_line,b_line)[A] ~ multi_normal(c(a,b),Rho,sigma_A),
+    a ~ dnorm(0,2),
+    b ~ dnorm(0,1),
+    sigma_A ~ dexp(1),
+    Rho ~ lkj_corr(2),
+    sigma ~ dexp(1)，
+      
+    a_plate[P] ~ dnorm(a_bar,sigma_p),
+    a_bar ~ dnorm(0,1.5),
+    sigma_p ~ dexp(1),
+     
+    a_exp[E] ~ dnorm(0,sigma_e),
+    sigma_e ~ dexp(1) 
+    ),data = d, chains = 4, cores = 4, log_lik = TRUE, control = list(max_treedepth=15),iter=4000
+)
+```
+
+```{r}
+trankplot(m4)
+
+```
+```{r}
+precis(m4,depth = 3)
+```
+
+Rhat for b_line is 1, with one 1.01
+Rhat for sigma_A[1],sigmaA[2],sigma is 1
+Rhat for a_line is around 2-6, 
+a 6.27, b 1.01,
+
+Rhat for
+a_plate is above 5
+sigma_p 1
+
+a_exp[1] 1.35
+a_exp[2] 1.35
+
+sigma_e 1.02
+
+### stopped here ###
+try follow example of R code 14.18
+```{r}
+m5 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma),
+    mu <- g[S]+a_line[A,S]+a_plate[P,S]+a_exp[E,S], #average treatment effect, three cluster types: accession, plate, experiment, different varying effects in different cluster types
+    # adaptive priors
+    vector[2]:a_line[A] ~ multi_normal(0,Rho_line,sigma_line),
+    vector[2]:a_plate[P] ~ multi_normal(0,Rho_plate, sigma_plate),
+    vector[2]:a_exp[E] ~ multi_normal(0,Rho_exp,sigma_exp),
+    
+    # fixed priors
+    g[S] ~ dnorm(0,1),
+    sigma_line ~ dexp(1),
+    Rho_line ~ dlkjcorr(4),
+    sigma_plate ~ dexp(1),
+    Rho_plate ~ dlkjcorr(4),
+    sigma_exp ~ dexp(1),
+    Rho_exp ~ dlkjcorr(4),
+    sigma ~ dexp(1)
+  ),data = d, chains = 4,cores = 4,log_lik=TRUE
+)
+```
+```{r}
+precis(m5,depth = 3)
+```
+Rhat generally fine
+
+As 3, but non-centered
+```{r}
+m5.1 <- ulam(
+  alist(
+    L ~ dnorm(mu,sigma),
+    mu <- g[S]+a_line[A,S]+a_plate[P,S]+a_exp[E,S], #average treatment effect, three cluster types: accession, plate, experiment, different varying effects in different cluster types
+    # adaptive priors - non-centered
+    transpars> matrix[A,2]:a_line <-
+      compose_noncentered(sigma_line,L_Rho_line,z_line),
+    transpars> matrix[P,2]:a_plate <-
+      compose_noncentered(sigma_plate,L_Rho_plate,z_plate),
+    transpars> matrix[E,2]:a_exp <-
+      compose_noncentered(sigma_exp,L_Rho_exp,z_exp),
+    matrix[2,A]:z_line ~ normal(0,1),  #not 2?
+    matrix[2,P]:z_plate ~ normal(0,1),
+    matrix[2,E]:z_exp ~ normal(0,1),
+  
+    # fixed priors
+    g[S] ~ dnorm(0,1),
+    sigma ~ dexp(1),
+    
+    vector[2]:sigma_line ~ dexp(1),
+    cholesky_factor_corr[2]:L_Rho_line ~ lkj_corr_cholesky(2),
+    
+    vector[2]:sigma_plate ~ dexp(1),
+    cholesky_factor_corr[2]:L_Rho_plate ~ lkj_corr_cholesky(2),
+    
+    vector[2]:sigma_exp ~ dexp(1),
+    cholesky_factor_corr[2]:L_Rho_exp ~ lkj_corr_cholesky(2),
+    
+    # compute ordinary correlation matrixes from Cholesky factors
+    gq> matrix[2,2]:Rho_line <<- multiply_lower_tri_self_transpose(L_Rho_line),
+    gq> matrix[2,2]:Rho_plate <<- multiply_lower_tri_self_transpose(L_Rho_plate),
+    gq> matrix[2,2]:Rho_exp <<- multiply_lower_tri_self_transpose(L_Rho_exp)
+  ),data = d, chains = 4,cores = 4,log_lik = TRUE) #control = list(adapt_delta=0.99,control = list(max_treedepth=15),iter=4000) can add try again
+```
+more divergent transitions compared to the centered model ?
+```{r}
+#pairs(m5.1) #why pairs not working
+```
+
+```{r}
+trankplot(m5.1)
+```
+
+```{r}
+precis(m5.1,depth = 3)
+```
+L_Rho_line[1,2], L_Rho_line[2,1] not the same? ?what is this metric
+L_Rho_plate[1,2], L_Rho_plate[2,1] not the same
+L_Rho_exp[1,2],L_Rho_exp[2,1] not the same
+
+between the two treatments, Rho_exp across 0, so no correlation between experiments within two treatments
+same for between plates
+however, a positive effect between two treatments across lines is found, so the reaction of lines to treatments are highly correlated
+
+
+Evaluate and compare the models.  Is there evidence of line, treatment, and line X treatment effects?  How does the magnitude of the experiment and plate effects compare to the line effects?
+```{r}
+compare(m5,m5.1)
+```
+non-centred model better than the previous one
+line effect: ther are differences in accessions of their hypocotyl length in High & Low red:far-red light ratios
+from m5.1, treatment effect:g[1]is negative, g[2] is positive, higher red:far-red light ratio has a negative effect while lower ratio has a positive effect on hypocoyl length among Arabidopsis accessions investigated in general
+magnitude of the experiment and plate effects compare to the line effects
+
