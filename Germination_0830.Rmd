@@ -1,0 +1,106 @@
+---
+title: "Germination_0830"
+author: "Lin_Zhang"
+date: "8/30/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rethinking)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(purrr)
+```
+```{r}
+d <- read.csv(file = "light_round1_tall.csv",header = T, sep = ",", stringsAsFactors = F)
+```
+1.  Subset the data to only include wps==0.  We may look at water potential in a future week.
+
+2. Let's start with a single pop "STDI".  
+```{r}
+d_wps0 <- filter(d,wps==0)
+```
+```{r}
+d_wps0_STDI <- filter(d_wps0,pops=="STDI")
+```
+```{r}
+ggplot(data = d_wps0_STDI,aes(x = day, y = cumulative_prop_germ))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~temps)
+```
+Evaluate models relate germination rate to temperature.  Explain your model choice and prior choice.  Try to do this both with ulam and brm.
+
+```{r}
+dat <- list(G = d_wps0_STDI$cumulative_prop_germ,day=d_wps0_STDI$day,germ=d_wps0_STDI$germ, temps=d_wps0_STDI$temps)
+```
+
+```{r}
+# zero-inflated model as seed under dormancy won't germinate
+# censored model as observation window might be shorter than time-range required by seed germination
+m1 <- ulam(
+alist(
+G ~ dzipois( p , lambda ),  # should the dataframe be re-organized thus the maximum germination prop ~ temp used?
+logit(p) <- ap + bd*temps,
+
+day|germ > 0 ~ exponential(lambda),
+day|germ == 0 ~ custom(exponential_lccdf(!Y| lambda)),
+log(lambda) <- ag+bg*temps,
+
+ap ~ dnorm( 0 , 1 ),
+ag ~ dnorm( 1 , 0.5 ),
+bd ~ dnorm(0,.5),
+bg ~ dnorm(0,.5)
+) , data=dat , chains=4 )
+```
+```{r}
+plot(precis(m1))
+```
+```{r}
+precis(m1)
+```
+```{r}
+inv_logit(-1.25) # temperature effect on dormancy intercept
+inv_logit(0.48) 
+exp(-2.74) # temperature effect on germination intercept
+exp(-0.06)
+```
+```{r}
+postcheck(m1)
+```
+
+3. now expand the data set to all species/populations.  Include species/pop (use "pops" as the predictor, don't worry about having a separate predictor for pops nested within species).  is partial pooling appropriate here?
+```{r}
+d_wps0$pop_ID <- as.integer(as.factor(d_wps0$pops))
+dat <- list(G = d_wps0$cumulative_prop_germ,day=d_wps0$day,germ=d_wps0$germ, temps=d_wps0$temps,Pop=d_wps0$pop_ID)
+```
+
+```{r}
+# zero-inflated model as seed under dormancy won't germinate
+# censored model as observation window might be shorter than time-range required by seed germination
+m2 <- ulam(
+alist(
+G ~ dzipois( p , lambda ),  #dgampois()? how to integrate with dzipois, or partial pooling
+logit(p) <- ap[Pop] + bd[Pop]*temps,
+
+day|germ > 0 ~ exponential(lambda),
+day|germ == 0 ~ custom(exponential_lccdf(!Y| lambda)),
+log(lambda) <- ag[Pop]+bg[Pop]*temps,
+
+ap[Pop] ~ dnorm( -1.5 , 1 ),
+ag[Pop] ~ dnorm( 1 , 0.5 ),
+bd[Pop] ~ dnorm(0,.5),
+bg[Pop] ~ dnorm(0,.5)
+) , data=dat , chains=4,log_lik = T)
+```
+```{r}
+precis(m2,depth=2)
+```
+
