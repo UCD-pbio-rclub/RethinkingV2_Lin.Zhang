@@ -1,0 +1,352 @@
+---
+title: "TREE:D"
+author: "Lin Zhang"
+date: "11/13/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR)
+library(tree)
+attach(Carseats)
+library(dplyr)
+```
+
+```{r}
+hist(Sales)
+```
+```{r}
+Carseats$High <- as.factor(ifelse(Sales<=8,"No","Yes"))
+```
+
+```{r}
+tree.carseats=tree(High~.-Sales,data = Carseats) # High derived by Sales
+summary(tree.carseats)
+```
+
+```{r}
+plot(tree.carseats)
+text(tree.carseats,pretty = 0)
+```
+# Problem 8. predict Sales response as a quantitative variable
+
+## 8a
+```{r}
+# split train vs test
+set.seed(2)
+seat_idx = sample(1:nrow(Carseats),200)
+seat_trn = Carseats[seat_idx,]
+seat_tst = Carseats[-seat_idx,]
+```
+
+## 8b
+```{r}
+seat_tree_quan = tree(Sales ~.,data = seat_trn)
+```
+```{r}
+summary(seat_tree_quan)
+```
+
+```{r}
+plot(seat_tree_quan)
+text(seat_tree_quan,pretty=0)
+```
+Among 6 actual used varaibles, Price is determinate in sales, followed by shelving location, competitor price then played a key role.
+Advertising and age of the local pop are the following influencing factors
+
+test MSE
+```{r}
+seat_tst_pred = predict(seat_tree_quan,seat_tst)
+seat.test = Carseats[-seat_idx,"Sales"]
+plot(seat_tst_pred,seat.test)
+abline(0,1)
+mean((seat_tst_pred- seat.test)^2)
+```
+## 8c 
+use CV to select a good tree complexity
+```{r}
+set.seed(18)
+seat_tree_quan_cv = cv.tree(seat_tree_quan)
+plot(seat_tree_quan_cv$size, sqrt(seat_tree_quan_cv$dev/nrow(seat_trn)),type = "b",xlab = "Tree Size",ylab = "CV-RMSE") #?
+```
+
+```{r}
+seat_tree_prune = prune.tree(seat_tree_quan,best = 10)
+summary(seat_tree_prune)
+```
+
+test MSE
+```{r}
+seat_tst_pred = predict(seat_tree_prune,seat_tst)
+seat.test = Carseats[-seat_idx,"Sales"]
+plot(seat_tst_pred,seat.test)
+abline(0,1)
+mean((seat_tst_pred- seat.test)^2)
+```
+similar actually a bit higher 
+
+## 8d bagging 
+```{r}
+(bag.seat = randomForest::randomForest(Sales ~.,data = seat_trn,mtry=10,importance=TRUE))
+```
+
+```{r}
+bag.seat$mse[500]
+```
+test MSE # do we still need MSE here?
+```{r}
+seat_tst_pred = predict(bag.seat,seat_tst)
+seat.test = Carseats[-seat_idx,"Sales"]
+plot(seat_tst_pred,seat.test)
+abline(0,1)
+mean((seat_tst_pred- seat.test)^2)
+```
+much lower!
+
+```{r}
+randomForest::importance(bag.seat)
+randomForest::varImpPlot(bag.seat)
+```
+Price is more important
+
+## 8e RF 
+```{r}
+(RF.seat = randomForest::randomForest(Sales ~.,data = seat_trn,mtry=4,importance=TRUE))
+```
+
+```{r}
+RF.seat$mse[500]
+```
+
+test MSE
+```{r}
+seat_tst_pred = predict(RF.seat,seat_tst)
+seat.test = Carseats[-seat_idx,"Sales"]
+plot(seat_tst_pred,seat.test)
+abline(0,1)
+mean((seat_tst_pred- seat.test)^2)
+```
+not too bad
+```{r}
+randomForest::importance(RF.seat)
+randomForest::varImpPlot(RF.seat)
+```
+```{r}
+# 10 variables
+obb.err=double(10)
+test.err=double(10)
+for(mtry in 1:10){
+  fit=randomForest::randomForest(Sales~.,data=seat_trn,mtry=mtry,ntree=400)
+  obb.err[mtry] = fit$mse[400]
+  pred=predict(fit,seat_tst)
+  test.err[mtry] = with(seat_tst,mean((Sales-pred)^2))
+  cat(mtry,"")
+}
+
+matplot(1:mtry,cbind(test.err,obb.err),pch=19,col=c("red","blue"),type = "b",ylab = "Mean Squred Error")
+legend("topright",legend=c("OOB","Test"),pch=19,col = c("red","blue"))
+```
+4 is not optimal,k use 6, but it does not increase at 10
+
+```{r}
+(RF.seat = randomForest::randomForest(Sales ~.,data = seat_trn,mtry=6,importance=TRUE))
+```
+
+```{r}
+RF.seat$mse[500]
+```
+
+test MSE
+```{r}
+seat_tst_pred = predict(RF.seat,seat_tst)
+seat.test = Carseats[-seat_idx,"Sales"]
+plot(seat_tst_pred,seat.test)
+abline(0,1)
+mean((seat_tst_pred- seat.test)^2)
+```
+slightly better? than bagging
+
+# Problem 9
+```{r}
+data(OJ)
+```
+
+```{r}
+dim(OJ)
+?OJ
+head(OJ)
+```
+```{r}
+summary(OJ)
+#plot(OJ$Purchase,OJ$PriceCH)
+```
+##9a
+```{r}
+# split train vs test
+set.seed(2)
+train_idx = sample(1:nrow(OJ),800)
+OJ_trn = OJ[train_idx,]
+OJ_tst = OJ[-train_idx,]
+```
+##9b
+```{r}
+tree.OJ=tree(Purchase~.,data = OJ_trn) # High derived by Sales
+summary(tree.OJ)
+```
+Training error rate 0.1588
+Terminal node 9
+
+## 9c
+```{r}
+tree.OJ
+```
+Terminal 4, LoyalCH < 0.28, 172 observations in it, 87.8% buy MM with rest CH
+mean deviance 127.60 ?
+
+This node can be further split into node 8 and 9
+
+##9d
+```{r}
+plot(tree.OJ)
+text(tree.OJ,pretty = 0)
+```
+Loyal CH is critical here, while it is then influenced by PriceDiff 
+
+##9e
+test MSE
+```{r}
+library(RColorBrewer)
+OJ_tst_pred = predict(tree.OJ,OJ_tst,type = "class")
+confusion1 <- table(predicted=OJ_tst_pred,actual=OJ_tst$Purchase) 
+treeaccuracy <- paste0("Accuracy:",accuracy(predicted = OJ_tst_pred,actual = OJ_tst$Purchase))
+
+heatmap(confusion1,Rowv = FALSE,Colv = FALSE,symm = TRUE,na.rm = TRUE,xlab = "Assigned",ylab  = "Predicted",main = treeaccuracy, keep.dendro = TRUE,cexRow = 2,cexCol = 2,col= colorRampPalette(brewer.pal(8, "Blues"))(25),margins = c(5,5))
+
+```
+##9f&g&h
+use CV to select a good tree complexity
+```{r}
+set.seed(18)
+OJ_tree_cv = cv.tree(tree.OJ)
+plot(OJ_tree_cv$size, sqrt(OJ_tree_cv$dev/nrow(OJ_trn)),type = "b",xlab = "Tree Size",ylab = "CV-RMSE") #?
+```
+Around 7
+
+##9i&j&k
+```{r}
+tree.OJ.prune = prune.tree(tree.OJ,best = 6)
+summary(tree.OJ.prune)
+```
+higher...
+
+test error rates 
+```{r}
+OJ_tst_pred = predict(tree.OJ.prune,OJ_tst,type = "class")
+paste0("Accuracy:",accuracy(predicted = OJ_tst_pred,actual = OJ_tst$Purchase))
+```
+
+# Problem 10 boosting
+```{r}
+data("Hitters")
+```
+
+```{r}
+head(Hitters)
+dim(Hitters)
+summary(Hitters)
+?Hitters
+```
+
+## 10a
+```{r}
+Hitter <- na.omit(Hitters,col="Salary")
+Hitter$Salary <- log(Hitter$Salary)
+```
+
+## 10b
+```{r}
+# split train vs test
+train_idx = c(1:200)
+H_trn = Hitter[train_idx,]
+H_tst = Hitter[-train_idx,]
+```
+
+##10c & d
+```{r}
+library(gbm)
+```
+
+```{r}
+hist(Hitter$Salary)
+```
+not so gaussian
+
+```{r}
+boost.H = gbm(Salary ~., data = H_trn,distribution = "gaussian",n.trees = 1e4,shrinkage = 0.01,interaction.depth = 4)
+
+summary(boost.H)
+plot(boost.H,i="CAtBat")
+```
+
+```{r}
+# lambda_seq=seq(from=0.001,to=0.1,by=0.001)
+# predmat = predict(boost.H,newdata = H_tst,shrinkage=lambda_seq)
+# dim(predmat) 
+```
+cannot use vectorization?
+```{r}
+lambda_seq=seq(from=0.001,to=0.1,by=0.001)
+n <- length(lambda_seq)
+train_errors <- rep(NA,n)
+test_errors <- rep(NA,n)
+
+for (i in 1:length(lambda_seq))
+{
+  boost.H <- gbm(Salary ~., data = H_trn,distribution = "gaussian",n.trees = 1e3,shrinkage = lambda_seq[i])
+  train_pred <- predict(boost.H,H_trn,n.trees = 1e3)
+  test_pred <- predict(boost.H,H_tst,n.trees = 1e3)
+  train_errors[i]=mean((H_trn$Salary-train_pred)^2)
+  test_errors[i]=mean((H_tst$Salary-test_pred)^2)
+}
+```
+
+```{r}
+ggplot(data.frame(x=lambda_seq,y=train_errors),aes(x=x,y=y))+xlab("Shrinkage")+ylab("Train MSE") + geom_point()
+ggplot(data.frame(x=lambda_seq,y=test_errors),aes(x=x,y=y))+xlab("Shrinkage")+ylab("Test MSE") + geom_point()
+```
+```{r}
+mean(train_errors)
+mean(test_errors)
+```
+
+## 10f
+CAtBat
+
+## 10g
+```{r}
+(bag.H = randomForest::randomForest(Salary ~.,data = H_trn ,mtry=5,importance=TRUE))
+```
+
+```{r}
+bag.H$mse[500]
+```
+test MSE # do we still need MSE here?
+```{r}
+H_tst_pred = predict(bag.H,H_tst)
+plot(H_tst_pred,H_tst$Salary)
+abline(0,1)
+mean((H_tst_pred- H_tst$Salary)^2)
+```
+lower?
+
+# Problem 11
+```{r}
+
+```
+
